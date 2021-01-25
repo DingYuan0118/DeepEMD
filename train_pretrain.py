@@ -13,7 +13,7 @@ from Models.models.Network import DeepEMD
 from Models.utils import *
 from Models.dataloader.data_utils import *
 
-DATA_DIR='your/default/dataset/dir'
+DATA_DIR='./datasets'
 # DATA_DIR='/home/zhangchi/dataset'
 
 parser = argparse.ArgumentParser()

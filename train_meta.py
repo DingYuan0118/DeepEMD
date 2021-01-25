@@ -12,7 +12,7 @@ import time
 
 PRETRAIN_DIR='deepemd_pretrain_model/'
 # DATA_DIR='/home/zhangchi/dataset'
-DATA_DIR='your/default/dataset/dir'
+DATA_DIR='./datasets'
 
 parser = argparse.ArgumentParser()
 #about dataset and training
