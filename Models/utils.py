@@ -77,7 +77,8 @@ def load_model(model,dir):
     model_dict = model.state_dict()
     print('loading model from :', dir)
     pretrained_dict = torch.load(dir)['params']
-    if 'encoder' in list(pretrained_dict.keys())[0]:  # load from a parallel meta-trained model
+    if 'encoder' in list(pretrained_dict.keys())[0]:  
+        # load from a parallel meta-trained model
         if 'module' in list(pretrained_dict.keys())[0]:
             pretrained_dict = {k[7:]: v for k, v in pretrained_dict.items()}
         else:

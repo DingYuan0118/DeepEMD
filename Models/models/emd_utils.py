@@ -26,7 +26,7 @@ def emd_inference_qpth(distance_matrix, weight1, weight2, form='QP', l2_strength
     nelement_weight1 = weight1.shape[1]
     nelement_weight2 = weight2.shape[1]
 
-    Q_1 = distance_matrix.view(-1, 1, nelement_distmatrix).double()
+    Q_1 = distance_matrix.view(-1, 1, nelement_distmatrix).double() # [375, 1, 625]
 
     if form == 'QP':
         # version: QTQ
@@ -35,17 +35,17 @@ def emd_inference_qpth(distance_matrix, weight1, weight2, form='QP', l2_strength
         p = torch.zeros(nbatch, nelement_distmatrix).double().cuda()
     elif form == 'L2':
         # version: regularizer
-        Q = (l2_strength * torch.eye(nelement_distmatrix).double()).cuda().unsqueeze(0).repeat(nbatch, 1, 1)
-        p = distance_matrix.view(nbatch, nelement_distmatrix).double()
-    else:
+        Q = (l2_strength * torch.eye(nelement_distmatrix).double()).cuda().unsqueeze(0).repeat(nbatch, 1, 1) # [375, 625, 625]
+        p = distance_matrix.view(nbatch, nelement_distmatrix).double() # [375, 625]
+    else: 
         raise ValueError('Unkown form')
 
-    h_1 = torch.zeros(nbatch, nelement_distmatrix).double().cuda()
-    h_2 = torch.cat([weight1, weight2], 1).double()
+    h_1 = torch.zeros(nbatch, nelement_distmatrix).double().cuda() # [375, 625]
+    h_2 = torch.cat([weight1, weight2], 1).double() # [375, 50]
     h = torch.cat((h_1, h_2), 1)
 
-    G_1 = -torch.eye(nelement_distmatrix).double().cuda().unsqueeze(0).repeat(nbatch, 1, 1)
-    G_2 = torch.zeros([nbatch, nelement_weight1 + nelement_weight2, nelement_distmatrix]).double().cuda()
+    G_1 = -torch.eye(nelement_distmatrix).double().cuda().unsqueeze(0).repeat(nbatch, 1, 1) # [375, 625, 625]
+    G_2 = torch.zeros([nbatch, nelement_weight1 + nelement_weight2, nelement_distmatrix]).double().cuda() # [375, 50, 625]
     # sum_j(xij) = si
     for i in range(nelement_weight1):
         G_2[:, i, nelement_weight2 * i:nelement_weight2 * (i + 1)] = 1
@@ -53,8 +53,8 @@ def emd_inference_qpth(distance_matrix, weight1, weight2, form='QP', l2_strength
     for j in range(nelement_weight2):
         G_2[:, nelement_weight1 + j, j::nelement_weight2] = 1
     #xij>=0, sum_j(xij) <= si,sum_i(xij) <= dj, sum_ij(x_ij) = min(sum(si), sum(dj))
-    G = torch.cat((G_1, G_2), 1)
-    A = torch.ones(nbatch, 1, nelement_distmatrix).double().cuda()
+    G = torch.cat((G_1, G_2), 1) # [375, 675, 625]
+    A = torch.ones(nbatch, 1, nelement_distmatrix).double().cuda() # [375, 1, 625]
     b = torch.min(torch.sum(weight1, 1), torch.sum(weight2, 1)).unsqueeze(1).double()
     flow = QPFunction(verbose=-1)(Q, p, G, h, A, b)
 

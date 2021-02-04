@@ -19,7 +19,9 @@ class DeepEMD(nn.Module):
             self.fc = nn.Linear(640, self.args.num_class)
 
     def forward(self, input):
+        # three modes. "meta" for meta-train, "pre_train" for pretrain
         if self.mode == 'meta':
+            # support shape: [1, 5, 640, 5, 5], query shape: [75, 640, 5, 5]
             support, query = input
             return self.emd_forward_1shot(support, query)
 
@@ -40,29 +42,29 @@ class DeepEMD(nn.Module):
 
     def get_weight_vector(self, A, B):
 
-        M = A.shape[0]
-        N = B.shape[0]
+        M = A.shape[0] # 75
+        N = B.shape[0] # 5
 
         B = F.adaptive_avg_pool2d(B, [1, 1])
         B = B.repeat(1, 1, A.shape[2], A.shape[3])
 
-        A = A.unsqueeze(1)
-        B = B.unsqueeze(0)
+        A = A.unsqueeze(1) # [75, 1, 640, 5, 5]
+        B = B.unsqueeze(0) # [1, 5, 640, 5, 5]
 
-        A = A.repeat(1, N, 1, 1, 1)
-        B = B.repeat(M, 1, 1, 1, 1)
+        A = A.repeat(1, N, 1, 1, 1) # [75, 5, 640, 5, 5]
+        B = B.repeat(M, 1, 1, 1, 1) # [75, 5, 640, 5, 5]
 
-        combination = (A * B).sum(2)
+        combination = (A * B).sum(2) # [75, 5, 5, 5]
         combination = combination.view(M, N, -1)
         combination = F.relu(combination) + 1e-3
         return combination
 
     def emd_forward_1shot(self, proto, query):
-        proto = proto.squeeze(0)
+        proto = proto.squeeze(0) # [5, 640, 5, 5]
 
-        weight_1 = self.get_weight_vector(query, proto)
-        weight_2 = self.get_weight_vector(proto, query)
-
+        weight_1 = self.get_weight_vector(query, proto) # [75, 5, 25]
+        weight_2 = self.get_weight_vector(proto, query) # [5, 75, 25]
+        # center normalize
         proto = self.normalize_feature(proto)
         query = self.normalize_feature(query)
 
@@ -100,6 +102,9 @@ class DeepEMD(nn.Module):
         return SFC
 
     def get_emd_distance(self, similarity_map, weight_1, weight_2, solver='opencv'):
+        # params: similarity_map(tensor) : shape[75, 5, 25, 25]
+        #         weight_1(tensor) : shape[75, 5, 25]
+        #         weight_2(tensor) : shape[5, 75, 25]
         num_query = similarity_map.shape[0]
         num_proto = similarity_map.shape[1]
         num_node=weight_1.shape[-1]
@@ -109,19 +114,18 @@ class DeepEMD(nn.Module):
             for i in range(num_query):
                 for j in range(num_proto):
                     _, flow = emd_inference_opencv(1 - similarity_map[i, j, :, :], weight_1[i, j, :], weight_2[j, i, :])
-
-                    similarity_map[i, j, :, :] =(similarity_map[i, j, :, :])*torch.from_numpy(flow).cuda()
+                    similarity_map[i, j, :, :] = (similarity_map[i, j, :, :])*torch.from_numpy(flow).cuda()
 
             temperature=(self.args.temperature/num_node)
             logitis = similarity_map.sum(-1).sum(-1) *  temperature
             return logitis
 
         elif solver == 'qpth':
-            weight_2 = weight_2.permute(1, 0, 2)
+            weight_2 = weight_2.permute(1, 0, 2) # [75, 5, 25]
             similarity_map = similarity_map.view(num_query * num_proto, similarity_map.shape[-2],
-                                                 similarity_map.shape[-1])
-            weight_1 = weight_1.view(num_query * num_proto, weight_1.shape[-1])
-            weight_2 = weight_2.reshape(num_query * num_proto, weight_2.shape[-1])
+                                                 similarity_map.shape[-1]) # [375, 25, 25]
+            weight_1 = weight_1.view(num_query * num_proto, weight_1.shape[-1]) # [375, 25]
+            weight_2 = weight_2.reshape(num_query * num_proto, weight_2.shape[-1]) # [375, 25]
 
             _, flows = emd_inference_qpth(1 - similarity_map, weight_1, weight_2,form=self.args.form, l2_strength=self.args.l2_strength)
 
@@ -142,22 +146,22 @@ class DeepEMD(nn.Module):
 
 
     def get_similiarity_map(self, proto, query):
-        way = proto.shape[0]
-        num_query = query.shape[0]
-        query = query.view(query.shape[0], query.shape[1], -1)
-        proto = proto.view(proto.shape[0], proto.shape[1], -1)
+        way = proto.shape[0] # 5
+        num_query = query.shape[0] # 75
+        query = query.view(query.shape[0], query.shape[1], -1) # [75, 640, 25]
+        proto = proto.view(proto.shape[0], proto.shape[1], -1) # [5, 640, 25]
 
-        proto = proto.unsqueeze(0).repeat([num_query, 1, 1, 1])
-        query = query.unsqueeze(1).repeat([1, way, 1, 1])
-        proto = proto.permute(0, 1, 3, 2)
-        query = query.permute(0, 1, 3, 2)
-        feature_size = proto.shape[-2]
+        proto = proto.unsqueeze(0).repeat([num_query, 1, 1, 1]) # [75, 5, 640, 25]
+        query = query.unsqueeze(1).repeat([1, way, 1, 1]) # [75, 5, 640, 25]
+        proto = proto.permute(0, 1, 3, 2) # [75,5,25,640]
+        query = query.permute(0, 1, 3, 2) # [75,5,25,640]
+        feature_size = proto.shape[-2] # [25]
 
         if self.args.metric == 'cosine':
-            proto = proto.unsqueeze(-3)
-            query = query.unsqueeze(-2)
-            query = query.repeat(1, 1, 1, feature_size, 1)
-            similarity_map = F.cosine_similarity(proto, query, dim=-1)
+            proto = proto.unsqueeze(-3) # [75, 5, 1, 25, 640]
+            query = query.unsqueeze(-2) # [75, 5, 25, 1, 640]
+            query = query.repeat(1, 1, 1, feature_size, 1) # [75, 5, 25, 25, 640]
+            similarity_map = F.cosine_similarity(proto, query, dim=-1) # [75, 5, 25, 25]
         if self.args.metric == 'l2':
             proto = proto.unsqueeze(-3)
             query = query.unsqueeze(-2)
@@ -180,7 +184,7 @@ class DeepEMD(nn.Module):
             return x
 
         else:
-            x = self.encoder(x)
+            x = self.encoder(x) # [80, 640, 5, 5]
             if dense == False:
                 x = F.adaptive_avg_pool2d(x, 1)
                 return x

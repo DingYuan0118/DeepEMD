@@ -23,7 +23,7 @@ parser.add_argument('-set',type=str,default='val',choices=['test','val'],help='t
 parser.add_argument('-bs', type=int, default=1,help='batch size of tasks')
 parser.add_argument('-max_epoch', type=int, default=100)
 parser.add_argument('-lr', type=float, default=0.0005)
-parser.add_argument('-temperature', type=float, default=12.5)
+parser.add_argument('-temperature', type=float, default=12.5, help="control the loss value")
 parser.add_argument('-step_size', type=int, default=10)
 parser.add_argument('-gamma', type=float, default=0.5)
 parser.add_argument('-val_frequency',type=int,default=50)
@@ -99,9 +99,9 @@ valset = Dataset(args.set, args)
 val_sampler = CategoriesSampler(valset.label, args.val_episode, args.way, args.shot + args.query)
 val_loader = DataLoader(dataset=valset, batch_sampler=val_sampler, num_workers=8, pin_memory=True)
 
-if not args.random_val_task:
-    print ('fix val set for all epochs')
-    val_loader=[x for x in val_loader]
+# if not args.random_val_task:
+#     print ('fix val set for all epochs')
+#     val_loader=[x for x in val_loader]
 print('save all checkpoint models:', (args.save_all is True))
 
 #label for query set, always in the same pattern
@@ -155,6 +155,7 @@ for epoch in range(1, args.max_epoch + 1):
         model.module.mode = 'meta'
         if args.shot > 1:
             data_shot = model.module.get_sfc(data_shot)
+        # prepare data for each gpu [num_gpu, 5, 640, 5, 5]
         logits = model((data_shot.unsqueeze(0).repeat(num_gpu, 1, 1, 1, 1), data_query))
         loss = F.cross_entropy(logits, label)
 
