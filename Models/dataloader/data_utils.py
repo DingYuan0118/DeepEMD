@@ -39,6 +39,14 @@ def set_up_datasets(args):
             from Models.dataloader.cifar_fs.sampling.cifar_fs import DatasetLoader as Dataset
         elif args.deepemd == 'grid':
             from Models.dataloader.cifar_fs.gird.cifar_fs import DatasetLoader as Dataset
+    elif args.dataset == 'recognition36':
+        args.num_class = 20
+        if args.deepemd == 'fcn':
+            from Models.dataloader.recognition36.fcn.recognition_36 import Recognition36 as Dataset
+        elif args.deepemd == 'sampling':
+            from Models.dataloader.recognition36.sampling.recognition_36 import Recognition36 as Dataset
+        elif args.deepemd == 'grid':
+            from Models.dataloader.recognition36.gird.recognition_36 import Recognition36 as Dataset
     else:
         raise ValueError('Unkown Dataset')
     return Dataset

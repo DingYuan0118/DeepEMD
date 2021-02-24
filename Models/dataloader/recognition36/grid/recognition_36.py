@@ -82,7 +82,7 @@ class MiniImageNet(Dataset):
                                   min(size, center_location + enlarged_grid_size // 2)))
             center_location = center_location + raw_grid_size
 
-        return location_list
+        return location_list # 返回经ratio扩大后，单个方向上每个grid的前后坐标
 
     def get_pyramid(self,img,num_patch):
         if self.setname == 'val' or self.setname == 'test':
@@ -103,11 +103,11 @@ class MiniImageNet(Dataset):
             for j in range(num_grid):
                 patch_location_w=grid_locations_w[j]
                 patch_location_h=grid_locations_h[i]
-                left_up_corner_w=patch_location_w[0]
+                left_up_corner_w=patch_location_w[0] # 左上角坐标
                 left_up_corner_h=patch_location_h[0]
-                right_down_cornet_w=patch_location_w[1]
+                right_down_cornet_w=patch_location_w[1] # 右下角坐标
                 right_down_cornet_h = patch_location_h[1]
-                patch=img.crop((left_up_corner_w,left_up_corner_h,right_down_cornet_w,right_down_cornet_h))
+                patch=img.crop((left_up_corner_w,left_up_corner_h,right_down_cornet_w,right_down_cornet_h)) # 根据坐标裁剪
                 patch=self.transform(patch)
                 patches_list.append(patch)
         return patches_list
