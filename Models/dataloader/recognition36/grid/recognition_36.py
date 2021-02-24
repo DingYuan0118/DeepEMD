@@ -8,11 +8,12 @@ import random
 import numpy as np
 import json
 
-class MiniImageNet(Dataset):
+class Recognition36(Dataset):
 
     def __init__(self, setname, args):
         IMAGE_PATH = os.path.join(args.data_dir, 'recognition36/images')
         SPLIT_PATH = os.path.join(args.data_dir, 'recognition36')
+        self.setname = setname
         if setname in ["test", "novel_all"]:
             json_path = osp.join(SPLIT_PATH, 'novel_all.json') # 当测试数据集与源数据集不一致时使用
         else:

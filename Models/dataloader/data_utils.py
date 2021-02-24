@@ -46,7 +46,7 @@ def set_up_datasets(args):
         elif args.deepemd == 'sampling':
             from Models.dataloader.recognition36.sampling.recognition_36 import Recognition36 as Dataset
         elif args.deepemd == 'grid':
-            from Models.dataloader.recognition36.gird.recognition_36 import Recognition36 as Dataset
+            from Models.dataloader.recognition36.grid.recognition_36 import Recognition36 as Dataset
     else:
         raise ValueError('Unkown Dataset')
     return Dataset
