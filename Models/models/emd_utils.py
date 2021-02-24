@@ -34,7 +34,7 @@ def emd_inference_qpth(distance_matrix, weight1, weight2, form='QP', l2_strength
             nelement_distmatrix).double().cuda().unsqueeze(0).repeat(nbatch, 1, 1)  # 0.00001 *
         p = torch.zeros(nbatch, nelement_distmatrix).double().cuda()
     elif form == 'L2':
-        # version: regularizer
+        # version: regularizer strength = l2_strength
         Q = (l2_strength * torch.eye(nelement_distmatrix).double()).cuda().unsqueeze(0).repeat(nbatch, 1, 1) # [375, 625, 625]
         p = distance_matrix.view(nbatch, nelement_distmatrix).double() # [375, 625]
     else: 
@@ -55,7 +55,7 @@ def emd_inference_qpth(distance_matrix, weight1, weight2, form='QP', l2_strength
     #xij>=0, sum_j(xij) <= si,sum_i(xij) <= dj, sum_ij(x_ij) = min(sum(si), sum(dj))
     G = torch.cat((G_1, G_2), 1) # [375, 675, 625]
     A = torch.ones(nbatch, 1, nelement_distmatrix).double().cuda() # [375, 1, 625]
-    b = torch.min(torch.sum(weight1, 1), torch.sum(weight2, 1)).unsqueeze(1).double()
+    b = torch.min(torch.sum(weight1, 1), torch.sum(weight2, 1)).unsqueeze(1).double() # [375, 1]
     flow = QPFunction(verbose=-1)(Q, p, G, h, A, b)
 
     emd_score = torch.sum((1 - Q_1).squeeze() * flow, 1)
