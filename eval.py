@@ -9,7 +9,7 @@ from Models.models.Network import DeepEMD
 from Models.utils import *
 from Models.dataloader.data_utils import *
 
-DATA_DIR='your/default/dataset/dir'
+DATA_DIR='./datasets'
 # DATA_DIR='/home/zhangchi/dataset'
 MODEL_DIR='deepemd_trained_model/miniimagenet/fcn/max_acc.pth'
 
@@ -20,7 +20,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-way', type=int, default=5)
 parser.add_argument('-shot', type=int, default=1)
 parser.add_argument('-query', type=int, default=15)  # number of query image per class
-parser.add_argument('-dataset', type=str, default='miniimagenet', choices=['miniimagenet', 'cub','tieredimagenet','fc100','tieredimagenet_yao','cifar_fs'])
+parser.add_argument('-dataset', type=str, default='miniimagenet', choices=['miniimagenet', 'cub','tieredimagenet','fc100',\
+                                                    'tieredimagenet_yao','cifar_fs', 'recognition36']) # 增加自定义数据集
 parser.add_argument('-set', type=str, default='test', choices=['train','val', 'test'])
 # about model
 parser.add_argument('-temperature', type=float, default=12.5)
@@ -81,7 +82,7 @@ label = label.type(torch.cuda.LongTensor)
 
 with torch.no_grad():
     for i, batch in enumerate(tqdm_gen, 1):
-        data, _ = [_.cuda() for _ in batch]
+        data, _ = [_.cuda() for _ in batch] # "_"取出label，但后续均未使用，每一个batch都重置了label
         k = args.way * args.shot
         model.module.mode = 'encoder'
         data = model(data)

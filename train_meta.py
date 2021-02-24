@@ -1,4 +1,5 @@
 import argparse
+from numpy.core.fromnumeric import argsort
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import torch.nn as nn
@@ -83,7 +84,8 @@ model = model.cuda()
 model.eval()
 
 
-args.save_path = '%s/%s/%dshot-%dway/'%(args.dataset,args.deepemd,args.shot,args.way)
+# args.save_path = '%s/%s/%dshot-%dway/'%(args.dataset,args.deepemd,args.shot,args.way)
+args.save_path = '%s/%s/%s/%dshot-%dway/'%(args.dataset,args.deepemd,args.solver,args.shot,args.way)
 
 args.save_path=osp.join('checkpoint',args.save_path)
 if args.extra_dir is not None:
@@ -99,12 +101,12 @@ valset = Dataset(args.set, args)
 val_sampler = CategoriesSampler(valset.label, args.val_episode, args.way, args.shot + args.query)
 val_loader = DataLoader(dataset=valset, batch_sampler=val_sampler, num_workers=8, pin_memory=True)
 
-# if not args.random_val_task:
-#     print ('fix val set for all epochs')
-#     val_loader=[x for x in val_loader]
+if not args.random_val_task:
+    print ('fix val set for all epochs')
+    val_loader=[x for x in val_loader]
 print('save all checkpoint models:', (args.save_all is True))
 
-#label for query set, always in the same pattern
+#label for query set, always in the same pattern 重新按批次定义label
 label = torch.arange(args.way, dtype=torch.int8).repeat(args.query)#012340123401234...
 label = label.type(torch.LongTensor)
 label = label.cuda()
