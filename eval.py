@@ -21,7 +21,7 @@ parser.add_argument('-way', type=int, default=5)
 parser.add_argument('-shot', type=int, default=1)
 parser.add_argument('-query', type=int, default=15)  # number of query image per class
 parser.add_argument('-dataset', type=str, default='miniimagenet', choices=['miniimagenet', 'cub','tieredimagenet','fc100',\
-                                                    'tieredimagenet_yao','cifar_fs', 'recognition36']) # 增加自定义数据集
+                                                    'tieredimagenet_yao','cifar_fs', 'recognition36', 'recognition36_crop']) # 增加自定义数据集
 parser.add_argument('-set', type=str, default='test', choices=['train','val', 'test'])
 # about model
 parser.add_argument('-temperature', type=float, default=12.5)
