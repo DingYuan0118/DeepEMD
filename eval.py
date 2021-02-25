@@ -43,7 +43,7 @@ parser.add_argument('-sfc_wd', type=float, default=0, help='weight decay for SFC
 parser.add_argument('-sfc_update_step', type=float, default=100)
 parser.add_argument('-sfc_bs', type=int, default=4)
 # others
-parser.add_argument('-test_episode', type=int, default=5000)
+parser.add_argument('-test_episode', type=int, default=1000)
 parser.add_argument('-gpu', default='0,1')
 parser.add_argument('-data_dir', type=str, default=DATA_DIR)
 parser.add_argument('-model_dir', type=str, default=MODEL_DIR)
