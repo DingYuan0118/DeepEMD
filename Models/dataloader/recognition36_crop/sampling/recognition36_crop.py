@@ -10,8 +10,8 @@ import json
 class Recognition36(Dataset):
 
     def __init__(self, setname, args):
-        IMAGE_PATH = os.path.join(args.data_dir, 'recognition36/images')
-        SPLIT_PATH = os.path.join(args.data_dir, 'recognition36')
+        IMAGE_PATH = os.path.join(args.data_dir, 'recognition36_crop/images')
+        SPLIT_PATH = os.path.join(args.data_dir, 'recognition36_crop')
         if setname in ["test", "novel_all"]:
             json_path = osp.join(SPLIT_PATH, 'novel_all.json') # 当测试数据集与源数据集不一致时使用
         else:

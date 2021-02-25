@@ -17,11 +17,6 @@ class MiniImageNet(Dataset):
         label = []
         lb = -1
 
-        if 'num_patch' not in vars(args).keys():
-            print ('do not assign num_patch parameter, set as default: 9')
-            self.num_patch=9
-        else:
-            self.num_patch=args.num_patch
 
         self.wnids = []
 
@@ -37,6 +32,11 @@ class MiniImageNet(Dataset):
         self.data = data#data path of all data
         self.label = label #label of all data
         self.num_class = len(set(label))
+        if 'num_patch' not in vars(args).keys():
+            print ('do not assign num_patch parameter, set as default: 9')
+            self.num_patch=9
+        else:
+            self.num_patch=args.num_patch
         image_size = 84
         self.transform = transforms.Compose([
             transforms.RandomResizedCrop(image_size),
