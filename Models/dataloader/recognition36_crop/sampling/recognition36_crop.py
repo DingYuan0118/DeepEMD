@@ -7,7 +7,7 @@ import torch
 import os
 import json
 
-class Recognition36(Dataset):
+class recognition36Crop(Dataset):
 
     def __init__(self, setname, args):
         IMAGE_PATH = os.path.join(args.data_dir, 'recognition36_crop/images')

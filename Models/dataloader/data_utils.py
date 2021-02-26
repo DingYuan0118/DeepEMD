@@ -47,6 +47,14 @@ def set_up_datasets(args):
             from Models.dataloader.recognition36.sampling.recognition_36 import Recognition36 as Dataset
         elif args.deepemd == 'grid':
             from Models.dataloader.recognition36.grid.recognition_36 import Recognition36 as Dataset
+    elif args.dataset == 'recognition36_crop':
+        args.num_class = 20
+        if args.deepemd == 'fcn':
+            from Models.dataloader.recognition36_crop.fcn.recognition36_crop import recognition36Crop as Dataset
+        elif args.deepemd == 'sampling':
+            from Models.dataloader.recognition36_crop.sampling.recognition36_crop import recognition36Crop as Dataset
+        elif args.deepemd == 'grid':
+            from Models.dataloader.recognition36_crop.grid.recognition36_crop import recognition36Crop as Dataset
     else:
         raise ValueError('Unkown Dataset')
     return Dataset
