@@ -118,6 +118,7 @@ class ResNet(nn.Module):
 
 
 if __name__=='__main__':
-    model=ResNet()
+    args = None
+    model=ResNet(args)
     input = torch.FloatTensor(5, 3, 80, 80)
     out = model(input)

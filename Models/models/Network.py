@@ -13,7 +13,11 @@ class DeepEMD(nn.Module):
         self.mode = mode
         self.args = args
 
-        self.encoder = ResNet(args=args)
+         # 为换backbone做准备,不改变原程序实现
+        if self.args.model == 'resnet':
+            self.encoder = ResNet(args=args)
+        else:
+            raise ValueError("没有{}模型".format(self.args.model))
 
         if self.mode == 'pre_train':
             self.fc = nn.Linear(640, self.args.num_class)

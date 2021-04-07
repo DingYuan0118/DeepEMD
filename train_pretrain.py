@@ -20,6 +20,7 @@ parser = argparse.ArgumentParser()
 # about dataset and network
 parser.add_argument('-dataset', type=str, default='miniimagenet', choices=['miniimagenet', 'cub','tieredimagenet','fc100','tieredimagenet_yao','cifar_fs'])
 parser.add_argument('-data_dir', type=str, default=DATA_DIR)
+parser.add_argument('--model', type=str, default='resnet', help='选择要使用的backbone(为vit transformer做准备)')
 # about pre-training
 parser.add_argument('-max_epoch', type=int, default=120)
 parser.add_argument('-lr', type=float, default=0.1)
