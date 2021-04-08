@@ -20,11 +20,11 @@ class DeepEMD(nn.Module):
         elif self.args.model == 'ViT':
             self.encoder = ViT_feature(image_size=256,
                                        patch_size=32,
-                                       num_classes=1000,
+                                       num_classes=5,
                                        dim=512,
                                        depth=4,
                                        heads=16,
-                                       mlp_dim=2048,
+                                       mlp_dim=1024,
                                        dropout=0.1,
                                        emb_dropout=0.1)
         else:

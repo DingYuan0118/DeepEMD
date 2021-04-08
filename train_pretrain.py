@@ -101,9 +101,11 @@ val_loader = DataLoader(
 model = DeepEMD(args, mode='pre_train')
 model = nn.DataParallel(model, list(range(num_gpu)))
 model = model.cuda()
-# if not args.random_val_task:
-#     print('fix val set for all epochs')
-#     val_loader = [x for x in val_loader]
+print_model_params(model, args)
+
+if not args.random_val_task:
+    print('fix val set for all epochs')
+    val_loader = [x for x in val_loader]
 print('save all checkpoint models:', (args.save_all is True))
 
 # label of query images.
