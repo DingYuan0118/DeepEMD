@@ -103,10 +103,10 @@ model = nn.DataParallel(model, list(range(num_gpu)))
 model = model.cuda()
 print_model_params(model, args)
 
-if not args.random_val_task:
-    print('fix val set for all epochs')
-    val_loader = [x for x in val_loader]
-print('save all checkpoint models:', (args.save_all is True))
+# if not args.random_val_task:
+#     print('fix val set for all epochs')
+#     val_loader = [x for x in val_loader]
+# print('save all checkpoint models:', (args.save_all is True))
 
 # label of query images.
 # shape[75]:012340123401234...
@@ -186,7 +186,7 @@ for epoch in range(1, args.max_epoch + 1):
             k = args.way * args.shot
             # encoder data by encoder
             model.module.mode = 'encoder'
-            data = model(data)
+            data = model(data) # [5*16, 640, 5, 5] for resent [5*16, 512, 8, 8] for ViT
             data_shot, data_query = data[:k], data[k:]
             # episode learning
             model.module.mode = 'meta'

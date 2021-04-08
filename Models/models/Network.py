@@ -61,7 +61,7 @@ class DeepEMD(nn.Module):
             out = self.fc(self.encode(input, dense=False).squeeze(-1).squeeze(-1))
 
         elif self.args.model == "ViT":
-            out = self.mlp_head(self.encoder(input))
+            out = self.mlp_head(self.encode(input, dense=False))
 
         return out
 
@@ -223,12 +223,25 @@ class DeepEMD(nn.Module):
             return x
 
         else:
-            x = self.encoder(x)  # [batchsize, 640, 5, 5]
-            if dense == False:
-                x = F.adaptive_avg_pool2d(x, 1) # [batchsize, 640, 1, 1]
-                return x
-            if self.args.feature_pyramid is not None:
-                x = self.build_feature_pyramid(x)
+            if self.args.model == "resnet":
+                x = self.encoder(x)  # [batchsize, 640, 5, 5]
+                if dense == False:
+                    x = F.adaptive_avg_pool2d(x, 1) # [batchsize, 640, 1, 1]
+                    return x
+                if self.args.feature_pyramid is not None:
+                    x = self.build_feature_pyramid(x)
+            # 使用ViT网络作为特征提取器,将矩阵变形后计算EMD距离
+            elif self.args.model == "ViT":
+                x = self.encoder(x) # [batchsize, patchsize+1, 512]
+                if dense == False:
+                    # 在pretrain阶段使用
+                    x = x.mean(dim = 1) if self.encoder.pool == 'mean' else x[:, 0]
+                    x = self.encoder.to_latent(x) # [batchsize, 512]
+                else:
+                    # 在验证是计算EMD距离时使用
+                    x = x[:,1:] #[batchsize, patchsize, 512]
+                    bs, ps, dim = x.shape[0], x.shape[1], x.shape[2]
+                    x = x.reshape((bs, dim, self.encoder.n_patch, self.encoder.n_patch)) #[batchsize, dim, patch, patch]
         return x
 
     def build_feature_pyramid(self, feature):
