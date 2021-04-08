@@ -119,6 +119,20 @@ class ResNet(nn.Module):
 
 if __name__=='__main__':
     args = None
-    model=ResNet(args)
+    v=ResNet(args)
     input = torch.FloatTensor(5, 3, 80, 80)
-    out = model(input)
+    out = v(input)
+    print(out.shape)
+    total_params = sum(p.numel() for p in v.parameters())
+    total_buffers = sum(q.numel() for q in v.buffers())
+    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m parameters.".format(v.__class__.__name__, total_params + total_buffers))
+    total_trainable_params = sum(p.numel() for p in v.parameters() if p.requires_grad)
+    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m training parameters.".format(v.__class__.__name__, total_trainable_params))
+
+    from torchvision.models import resnet18
+    v = resnet18()
+    total_params = sum(p.numel() for p in v.parameters())
+    total_buffers = sum(q.numel() for q in v.buffers())
+    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m parameters.".format(v.__class__.__name__, total_params + total_buffers))
+    total_trainable_params = sum(p.numel() for p in v.parameters() if p.requires_grad)
+    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m training parameters.".format(v.__class__.__name__, total_trainable_params))
