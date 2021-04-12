@@ -57,6 +57,7 @@ parser.add_argument('-extra_dir', type=str, default=None,
                     help='extra information that is added to checkpoint dir, e.g. hyperparameters')
 parser.add_argument('--image_size', type=int, default=84,
             help='extra information that is added to checkpoint dir, e.g. hyperparameters')
+parser.add_argument('--optim', type=str, default='SGD', help='选择优化器')
 
 args = parser.parse_args()
 pprint(vars(args))
@@ -76,7 +77,7 @@ set_seed(args.seed)
 dataset_name = args.dataset
 # args.save_path = 'pre_train/%s/%d-%.4f-%d-%.2f/' % \
 #                  (dataset_name, args.bs, args.lr, args.step_size, args.gamma)
-args.save_path = 'pre_train/{dataset}/{model}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+args.save_path = 'pre_train/{dataset}/{model}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_optim{optim}'.format(
     dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size)
 
 args.save_path = osp.join('checkpoint', args.save_path)
