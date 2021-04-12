@@ -111,7 +111,7 @@ deepemd_pretrain_model/*
 test.py
 deepemd_trained_model/*
 recog*.zip
-datasets/*.json
+datasets/*/*.json
 tmp*
 datasets/*.jar
 remote*
