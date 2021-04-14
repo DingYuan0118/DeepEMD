@@ -1,9 +1,11 @@
+from os import truncate
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .emd_utils import *
 from .resnet import ResNet
 from .vit_feature import ViT_feature
+import timm
 
 
 class DeepEMD(nn.Module):
@@ -18,15 +20,18 @@ class DeepEMD(nn.Module):
         if self.args.model == 'resnet':
             self.encoder = ResNet(args=args)
         elif self.args.model == 'ViT':
-            self.encoder = ViT_feature(image_size=256,
+            self.encoder = ViT_feature(args=args, image_size=256,
                                        patch_size=32,
                                        num_classes=5,
                                        dim=512,
-                                       depth=4,
+                                       depth=self.args.vit_depth,
                                        heads=16,
                                        mlp_dim=1024,
                                        dropout=0.1,
                                        emb_dropout=0.1)
+        elif self.args.model == "vit_small_patch16_224":
+            self.encoder = timm.create_model("vit_small_patch16_224", pretrained=True)
+        
         else:
             raise ValueError("没有{}模型".format(self.args.model))
 
@@ -34,7 +39,7 @@ class DeepEMD(nn.Module):
             if self.args.model == 'resnet':
                 self.fc = nn.Linear(640, self.args.num_class)
             elif self.args.model == 'ViT':
-                self.mlp_head  = self.encoder.mlp_head
+                self.mlp_head  = self.encoder.mlp_head # 引用传递,同时改变
                 self.mlp_head[1] = nn.Linear(512, self.args.num_class)
 
     def forward(self, input):
@@ -62,6 +67,9 @@ class DeepEMD(nn.Module):
 
         elif self.args.model == "ViT":
             out = self.mlp_head(self.encode(input, dense=False))
+        
+        elif self.args.model == "vit_base_patch16_224":
+            out = self.encoder(input)
 
         return out
 
@@ -230,16 +238,18 @@ class DeepEMD(nn.Module):
                     return x
                 if self.args.feature_pyramid is not None:
                     x = self.build_feature_pyramid(x)
+
             # 使用ViT网络作为特征提取器,将矩阵变形后计算EMD距离
             elif self.args.model == "ViT":
-                x = self.encoder(x) # [batchsize, patchsize+1, 512]
+                x = self.encoder(x) # [batchsize, patchsize+1, 512] or [batchsize, patchsize, 512]
                 if dense == False:
                     # 在pretrain阶段使用
                     x = x.mean(dim = 1) if self.encoder.pool == 'mean' else x[:, 0]
                     x = self.encoder.to_latent(x) # [batchsize, 512]
                 else:
                     # 在验证是计算EMD距离时使用
-                    x = x[:,1:] #[batchsize, patchsize, 512]
+                    if self.args.vit_mode == "cls":
+                        x = x[:,1:] #[batchsize, patchsize, 512]
                     bs, ps, dim = x.shape[0], x.shape[1], x.shape[2]
                     x = x.reshape((bs, dim, self.encoder.n_patch, self.encoder.n_patch)) #[batchsize, dim, patch, patch]
         return x

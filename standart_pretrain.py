@@ -56,10 +56,13 @@ parser.add_argument('-seed', type=int, default=1)
 parser.add_argument('-extra_dir', type=str, default=None,
                     help='extra information that is added to checkpoint dir, e.g. hyperparameters')
 parser.add_argument('--image_size', type=int, default=84,
-            help='extra information that is added to checkpoint dir, e.g. hyperparameters')
+                    help='extra information that is added to checkpoint dir, e.g. hyperparameters')
 parser.add_argument('--optim', type=str, default='SGD', help='选择优化器')
-parser.add_argument('--not_use_clstoken', action="store_true", help='viT模型可选项是否添加cls token, 默认使用')
-parser.add_argument('--vit_mode', type=str, default='cls', choices=['cls', 'mean'], help='选择使用cls token或者mean(平均所有patch)的方式')
+parser.add_argument('--not_use_clstoken', action="store_true",
+                    help='viT模型可选项是否添加cls token, 默认使用')
+parser.add_argument('--vit_mode', type=str, default='cls',
+                    choices=['cls', 'mean'], help='选择使用cls token或者mean(平均所有patch)的方式')
+parser.add_argument('--vit_depth', type=int, default=4, help="使用ViT时的深度")
 
 
 args = parser.parse_args()
@@ -73,6 +76,11 @@ if args.model == "ViT" and args.image_size != '256':
     print("选用ViT时未将image_size调整为256, 当前image size = {},将转换为256".format(args.image_size))
     args.image_size = 256
 
+if args.model == "vit_small_patch16_224" and args.image_size != '224':
+    print("选用vit_small_patch16_224时未将image_size调整为224, 当前image size = {},将转换为224".format(args.image_size))
+    args.image_size = 224
+
+
 
 num_gpu = set_gpu(args)
 set_seed(args.seed)
@@ -80,13 +88,19 @@ set_seed(args.seed)
 dataset_name = args.dataset
 # args.save_path = 'pre_train/%s/%d-%.4f-%d-%.2f/' % \
 #                  (dataset_name, args.bs, args.lr, args.step_size, args.gamma)
-if args.model != "ViT":
-    args.save_path = 'pre_train/{dataset}/{model}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+if args.model == "resnet":
+    args.save_path = 'pre_train/{dataset}/{model}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
         dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim)
 
-else:
-    args.save_path = 'pre_train/{dataset}/{model}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-clstoken({class_token})_vit-mode({vit_mode})'.format(
-        dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, class_token=str(not args.not_use_clstoken), vit_mode=args.vit_mode, optim=args.optim)
+elif args.model == "ViT":
+    args.save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-clstoken({class_token})_vit-mode({vit_mode})'.format(
+        dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, class_token=str(not args.not_use_clstoken), vit_mode=args.vit_mode, optim=args.optim,
+        epoch=args.max_epoch, depth=args.vit_depth)
+
+elif args.model == "vit_small_patch16_224":
+    args.save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-clstoken({class_token})_vit-mode({vit_mode})'.format(
+        dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, class_token=str(not args.not_use_clstoken), vit_mode=args.vit_mode, optim=args.optim,
+        epoch=args.max_epoch, depth=args.vit_depth)
 
 
 args.save_path = osp.join('checkpoint', args.save_path)
@@ -103,10 +117,8 @@ train_loader = DataLoader(dataset=trainset, batch_size=args.bs,
                           shuffle=True, num_workers=8, pin_memory=True)
 
 valset = Dataset(args.set, args)
-val_sampler = CategoriesSampler(
-    valset.label, args.num_episode, args.way, args.shot + args.query)
 val_loader = DataLoader(
-    dataset=valset, batch_sampler=val_sampler, num_workers=8, pin_memory=True)
+    dataset=valset, batch_size=args.bs, num_workers=8, pin_memory=True)
 
 model = DeepEMD(args, mode='pre_train')
 model = nn.DataParallel(model, list(range(num_gpu)))
@@ -128,7 +140,8 @@ label = label.cuda()
 #                              {'params': model.module.fc.parameters(), 'lr': args.lr}
 #                              ], momentum=0.9, nesterov=True, weight_decay=0.0005)
 
-optimizer = torch.optim.SGD(model.module.parameters(),lr=args.lr, momentum=0.9, nesterov=True, weight_decay=0.0005)
+optimizer = torch.optim.SGD(model.module.parameters(
+), lr=args.lr, momentum=0.9, nesterov=True, weight_decay=0.0005)
 
 lr_scheduler = torch.optim.lr_scheduler.StepLR(
     optimizer, step_size=args.step_size, gamma=args.gamma)
@@ -148,6 +161,7 @@ trlog['val_acc'] = []
 trlog['max_acc'] = 0.0
 trlog['max_acc_epoch'] = 0
 
+save_freq = 20
 global_count = 0
 writer = SummaryWriter(osp.join(args.save_path, 'tf'))
 
@@ -187,7 +201,8 @@ for epoch in range(1, args.max_epoch + 1):
     model.module.mode = 'meta'
     vl = Averager()
     va = Averager()
-    # use deepemd fcn for validation
+
+    # #use deepemd fcn for validation 注释掉使用EMD距离作为validation方法
     with torch.no_grad():
         tqdm_gen = tqdm.tqdm(val_loader)
         for i, batch in enumerate(tqdm_gen, 1):
@@ -196,7 +211,8 @@ for epoch in range(1, args.max_epoch + 1):
             k = args.way * args.shot
             # encoder data by encoder
             model.module.mode = 'encoder'
-            data = model(data) # [5*16, 640, 5, 5] for resent [5*16, 512, 8, 8] for ViT
+            # [5*16, 640, 5, 5] for resent [5*16, 512, 8, 8] for ViT
+            data = model(data)
             data_shot, data_query = data[:k], data[k:]
             # episode learning
             model.module.mode = 'meta'
@@ -242,6 +258,8 @@ for epoch in range(1, args.max_epoch + 1):
     print('This epoch takes %d seconds' % (time.time() - start_time),
           '\nstill need around %.2f hour to finish' % ((time.time() - start_time) * (args.max_epoch - epoch) / 3600))
     lr_scheduler.step()
+
+
 
 writer.close()
 result_list.append('Val Best Epoch {},\nbest val Acc {:.4f}'.format(
