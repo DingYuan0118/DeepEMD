@@ -7,6 +7,8 @@ import numpy as np
 import os.path as osp
 import random
 
+from torch.utils.data import dataset
+
 def save_list_to_txt(name,input_list):
     f=open(name,mode='w')
     for item in input_list:
@@ -30,6 +32,7 @@ def ensure_path(path):
     else:
         print ('create folder:',path)
         os.makedirs(path)
+    print("save path: ", path)
 
 class Averager():
 
@@ -116,3 +119,90 @@ def print_model_params(model, params):
     print("\033[1;32;m{}\033[0m model \033[1;32;m{}\033[0m backbone have \033[1;32;m{}\033[0m parameters.".format(model.__class__.__name__, params.model, total_params + total_buffers))
     total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print("\033[1;32;m{}\033[0m model \033[1;32;m{}\033[0m backbone have \033[1;32;m{}\033[0m training parameters.".format(model.__class__.__name__, params.model, total_trainable_params))
+
+def print_save_path(args):
+    # pretrain阶段使用
+    # 打印储存空间
+    # 使用可变变量引用传参，不用显示赋值
+    if args.model == "resnet":
+        if args.with_SA:
+            args.save_path = 'pre_train/{dataset}/{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch, depth=args.SA_depth,
+                heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim)
+        else:
+            args.save_path = 'pre_train/{dataset}/{model}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch)
+
+    elif args.model == "ViT":
+        args.save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-clstoken({class_token})_vit-mode({vit_mode})'.format(
+            dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, class_token=str(not args.not_use_clstoken), vit_mode=args.vit_mode, optim=args.optim,
+            epoch=args.max_epoch, depth=args.vit_depth)
+
+    elif args.model == "vit_small_patch16_224":
+        args.save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-imagenet-params({imagenet_pretrain}))'.format(
+            dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim,epoch=args.max_epoch, depth=args.vit_depth, imagenet_pretrain=str(not args.not_imagenet_pretrain))
+
+    args.save_path = osp.join('checkpoint', args.save_path)
+    if args.extra_dir is not None:
+        args.save_path = osp.join(args.save_path, args.extra_dir)
+    ensure_path(args.save_path)
+    return args.save_path
+
+def pretrain_save_path(args):
+    # train_meta阶段使用，找寻pretrain model的存储地址
+    if args.model == "resnet":
+        if args.with_SA:
+            args.pre_save_path = 'pre_train/{dataset}/{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch, depth=args.SA_depth,
+                heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim)
+        else:
+            args.pre_save_path = 'pre_train/{dataset}/{model}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch)
+
+    elif args.model == "ViT":
+        args.pre_save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-clstoken({class_token})_vit-mode({vit_mode})'.format(
+            dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, class_token=str(not args.not_use_clstoken), vit_mode=args.vit_mode, optim=args.pre_optim,
+            epoch=args.pre_epoch, depth=args.vit_depth)
+
+    elif args.model == "vit_small_patch16_224":
+        args.pre_save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-imagenet-params({imagenet_pretrain}))'.format(
+            dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim,epoch=args.pre_epoch, depth=args.vit_depth, imagenet_pretrain=str(not args.not_imagenet_pretrain))
+
+    args.pre_save_path = osp.join('checkpoint', args.pre_save_path)
+    if args.extra_dir is not None:
+        args.pre_save_path = osp.join(args.pre_save_path, args.extra_dir)
+    if os.path.exists(args.pre_save_path):
+        print("预训练模型路径:{}".format(args.pre_save_path))
+    else:
+        raise ValueError("没有该路径:{}".format(args.pre_save_path))
+    return args.pre_save_path
+
+def parse_tune_pretrain(args):
+    if args.model == "ViT" and args.deepemd != 'fcn':
+        print("选用ViT时未将deepemd参数置为fcn模式,当前为{}模式,将转换为fcn模式".format(args.deepemd))
+        args.deepemd = 'fcn'
+
+    if args.model == "ViT" and args.image_size != '256':
+        print("选用ViT时未将image_size调整为256, 当前image size = {},将转换为256".format(args.image_size))
+        args.image_size = 256
+
+    if args.model == "vit_small_patch16_224" and args.image_size != '224':
+        print("选用vit_small_patch16_224时未将image_size调整为224, 当前image size = {},将转换为224".format(args.image_size))
+        args.image_size = 224
+
+    if args.model == 'resnet' and args.image_size != '84':
+        print("选用resnet时未将image_size调整为84, 当前image size = {},将转换为84".format(args.image_size))
+        args.image_size = 84
+
+    if args.model == 'resnet' and args.with_SA:
+        print("使用带self attention的resnet")
+
+def meta_save_path(args):
+    # meta train阶段使用
+    epoch_index = args.pre_save_path.find("_epoch")
+    args.model_path = args.pre_save_path[:epoch_index].split("/")[-1]
+    args.save_path = "{dataset}/{model_path}/{shot}shot-{way}way".format(dataset=args.dataset, model_path=args.model_path, shot=args.shot, way=args.way)
+    args.save_path = osp.join('checkpoint/meta_train', args.save_path)
+    if args.extra_dir is not None:
+        args.save_path = osp.join(args.save_path, args.extra_dir)
+    ensure_path(args.save_path)

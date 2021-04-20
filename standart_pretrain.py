@@ -63,6 +63,7 @@ parser.add_argument('--not_use_clstoken', action="store_true",
 parser.add_argument('--vit_mode', type=str, default='cls',
                     choices=['cls', 'mean'], help='选择使用cls token或者mean(平均所有patch)的方式')
 parser.add_argument('--vit_depth', type=int, default=4, help="使用ViT时的深度")
+parser.add_argument('--not_imagenet_pretrain', action="store_true", help="是否使用imagenet的pretrain参数")
 
 
 args = parser.parse_args()
@@ -98,9 +99,8 @@ elif args.model == "ViT":
         epoch=args.max_epoch, depth=args.vit_depth)
 
 elif args.model == "vit_small_patch16_224":
-    args.save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-clstoken({class_token})_vit-mode({vit_mode})'.format(
-        dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, class_token=str(not args.not_use_clstoken), vit_mode=args.vit_mode, optim=args.optim,
-        epoch=args.max_epoch, depth=args.vit_depth)
+    args.save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-imagenet-params({imagenet_pretrain}))'.format(
+        dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim,epoch=args.max_epoch, depth=args.vit_depth, imagenet_pretrain=str(not args.not_imagenet_pretrain))
 
 
 args.save_path = osp.join('checkpoint', args.save_path)
@@ -198,29 +198,47 @@ for epoch in range(1, args.max_epoch + 1):
     ta = ta.item()
 
     model = model.eval()
-    model.module.mode = 'meta'
+    # model.module.mode = 'meta'
     vl = Averager()
     va = Averager()
 
     # #use deepemd fcn for validation 注释掉使用EMD距离作为validation方法
+    # with torch.no_grad():
+    #     tqdm_gen = tqdm.tqdm(val_loader)
+    #     for i, batch in enumerate(tqdm_gen, 1):
+
+    #         data, _ = [_.cuda() for _ in batch]
+    #         k = args.way * args.shot
+    #         # encoder data by encoder
+    #         model.module.mode = 'encoder'
+    #         # [5*16, 640, 5, 5] for resent [5*16, 512, 8, 8] for ViT
+    #         data = model(data)
+    #         data_shot, data_query = data[:k], data[k:]
+    #         # episode learning
+    #         model.module.mode = 'meta'
+    #         if args.shot > 1:  # k-shot case
+    #             data_shot = model.module.get_sfc(data_shot)
+    #         # repeat for multi-gpu processing
+    #         logits = model((data_shot.unsqueeze(0).repeat(
+    #             num_gpu, 1, 1, 1, 1), data_query))
+    #         loss = F.cross_entropy(logits, label)
+    #         acc = count_acc(logits, label)
+    #         vl.add(loss.item())
+    #         va.add(acc)
+
+    #     vl = vl.item()
+    #     va = va.item()
+    # writer.add_scalar('data/val_loss', float(vl), epoch)
+    # writer.add_scalar('data/val_acc', float(va), epoch)
+    # tqdm_gen.set_description(
+    #     'epo {}, val, loss={:.4f} acc={:.4f}'.format(epoch, vl, va))
+
+    ## 使用正常分类图像的验证过程
     with torch.no_grad():
         tqdm_gen = tqdm.tqdm(val_loader)
-        for i, batch in enumerate(tqdm_gen, 1):
-
-            data, _ = [_.cuda() for _ in batch]
-            k = args.way * args.shot
-            # encoder data by encoder
-            model.module.mode = 'encoder'
-            # [5*16, 640, 5, 5] for resent [5*16, 512, 8, 8] for ViT
-            data = model(data)
-            data_shot, data_query = data[:k], data[k:]
-            # episode learning
-            model.module.mode = 'meta'
-            if args.shot > 1:  # k-shot case
-                data_shot = model.module.get_sfc(data_shot)
-            # repeat for multi-gpu processing
-            logits = model((data_shot.unsqueeze(0).repeat(
-                num_gpu, 1, 1, 1, 1), data_query))
+        for i , batch in enumerate(tqdm_gen, 1):
+            data, label = [_.cuda() for _ in batch]
+            logits = model(data)
             loss = F.cross_entropy(logits, label)
             acc = count_acc(logits, label)
             vl.add(loss.item())
@@ -230,8 +248,7 @@ for epoch in range(1, args.max_epoch + 1):
         va = va.item()
     writer.add_scalar('data/val_loss', float(vl), epoch)
     writer.add_scalar('data/val_acc', float(va), epoch)
-    tqdm_gen.set_description(
-        'epo {}, val, loss={:.4f} acc={:.4f}'.format(epoch, vl, va))
+
 
     if va >= trlog['max_acc']:
         print('A better model is found!!')
@@ -240,6 +257,10 @@ for epoch in range(1, args.max_epoch + 1):
         save_model('max_acc')
         torch.save(optimizer.state_dict(), osp.join(
             args.save_path, 'optimizer_best.pth'))
+    
+    if epoch % save_freq == 0:
+        print("epoch: {}, save model in frequency".format(epoch))
+        save_model('{}epoch'.format(epoch))
 
     trlog['train_loss'].append(tl)
     trlog['train_acc'].append(ta)

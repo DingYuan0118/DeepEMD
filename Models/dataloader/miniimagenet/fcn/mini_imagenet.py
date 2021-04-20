@@ -36,7 +36,7 @@ class MiniImageNet(Dataset):
         if setname == 'val' or setname == 'test':
             image_size = args.image_size
             self.transform = transforms.Compose([
-                transforms.Resize(image_size + image_size// 10),
+                transforms.Resize(int(image_size / 0.9)),
                 transforms.CenterCrop(image_size),
 
                 transforms.ToTensor(),

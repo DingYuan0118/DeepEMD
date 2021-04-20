@@ -30,7 +30,10 @@ class DeepEMD(nn.Module):
                                        dropout=0.1,
                                        emb_dropout=0.1)
         elif self.args.model == "vit_small_patch16_224":
-            self.encoder = timm.create_model("vit_small_patch16_224", pretrained=True)
+            if self.args.not_imagenet_pretrain:
+                self.encoder = timm.create_model("vit_small_patch16_224", pretrained=False, num_classes=self.args.num_class)
+            else:
+                self.encoder = timm.create_model("vit_small_patch16_224", pretrained=True, num_classes=self.args.num_class)
         
         else:
             raise ValueError("没有{}模型".format(self.args.model))
@@ -41,6 +44,9 @@ class DeepEMD(nn.Module):
             elif self.args.model == 'ViT':
                 self.mlp_head  = self.encoder.mlp_head # 引用传递,同时改变
                 self.mlp_head[1] = nn.Linear(512, self.args.num_class)
+            elif self.args.model == 'vit_small_patch16_224':
+                # TODO
+                raise Exception("代码未完善")
 
     def forward(self, input):
         # three modes. "meta" for meta-train, "pre_train" for pretrain
@@ -68,7 +74,7 @@ class DeepEMD(nn.Module):
         elif self.args.model == "ViT":
             out = self.mlp_head(self.encode(input, dense=False))
         
-        elif self.args.model == "vit_base_patch16_224":
+        elif self.args.model == "vit_small_patch16_224":
             out = self.encoder(input)
 
         return out

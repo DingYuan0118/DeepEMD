@@ -1,11 +1,14 @@
+from math import sqrt
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-
+from vit_pytorch.vit import Transformer
+from einops import rearrange
 
 # This ResNet network was designed following the practice of the following papers:
 # TADAM: Task dependent adaptive metric for improved few-shot learning (Oreshkin et al., in NIPS 2018) and
 # A Simple Neural Attentive Meta-Learner (Mishra et al., in ICLR 2018).
+
 
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
@@ -33,7 +36,6 @@ class BasicBlock(nn.Module):
         self.drop_block = drop_block
         self.block_size = block_size
 
-
     def forward(self, x):
         self.num_batches_tracked += 1
 
@@ -57,19 +59,22 @@ class BasicBlock(nn.Module):
         out = self.maxpool(out)
 
         if self.drop_rate > 0:
-            out = F.dropout(out, p=self.drop_rate, training=self.training, inplace=True)
+            out = F.dropout(out, p=self.drop_rate,
+                            training=self.training, inplace=True)
 
         return out
 
 
 class ResNet(nn.Module):
 
-    def __init__(self, args,block=BasicBlock, keep_prob=1.0, avg_pool=False, drop_rate=0.0, dropblock_size=5):
+    def __init__(self, args, block=BasicBlock, keep_prob=1.0, avg_pool=False, drop_rate=0.0, dropblock_size=5):
         self.inplanes = 3
         super(ResNet, self).__init__()
 
-        self.layer1 = self._make_layer(block, 64, stride=2, drop_rate=drop_rate)
-        self.layer2 = self._make_layer(block, 160, stride=2, drop_rate=drop_rate)
+        self.layer1 = self._make_layer(
+            block, 64, stride=2, drop_rate=drop_rate)
+        self.layer2 = self._make_layer(
+            block, 160, stride=2, drop_rate=drop_rate)
         self.layer3 = self._make_layer(block, 320, stride=2, drop_rate=drop_rate, drop_block=True,
                                        block_size=dropblock_size)
         self.layer4 = self._make_layer(block, 640, stride=2, drop_rate=drop_rate, drop_block=True,
@@ -80,10 +85,17 @@ class ResNet(nn.Module):
         self.keep_avg_pool = avg_pool
         self.dropout = nn.Dropout(p=1 - self.keep_prob, inplace=False)
         self.drop_rate = drop_rate
+        self.args = args
+
+        if args.with_SA:
+            # 使用self attention机制
+            self.transformer = Transformer(dim=640, depth=args.SA_depth, heads=args.SA_heads,
+                                           dim_head=args.SA_dim_head, dropout=args.SA_dropout, mlp_dim=args.SA_mlp_dim)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
+                nn.init.kaiming_normal_(
+                    m.weight, mode='fan_out', nonlinearity='leaky_relu')
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -98,7 +110,8 @@ class ResNet(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, drop_rate, drop_block, block_size))
+        layers.append(block(self.inplanes, planes, stride,
+                            downsample, drop_rate, drop_block, block_size))
         self.inplanes = planes * block.expansion
 
         return nn.Sequential(*layers)
@@ -110,29 +123,41 @@ class ResNet(nn.Module):
 
         x = self.layer3(x)
 
-        x = self.layer4(x)
+        x = self.layer4(x) # [bs, 640, 5, 5]
+
+
+        if self.args.with_SA:
+            # 需要reshape,使用einops库的rearrange
+            x = rearrange(x, 'b dim rows cols -> b (rows cols) dim')
+            x = self.transformer(x)
+            # 需要reshape,使用einops库的rearrange
+            x = rearrange(x, 'b (rows cols) dim -> b dim rows cols', cols=int(sqrt(x.shape[1])))
 
         return x
 
 
-
-
-if __name__=='__main__':
+if __name__ == '__main__':
     args = None
-    v=ResNet(args)
+    v = ResNet(args)
     input = torch.FloatTensor(5, 3, 80, 80)
     out = v(input)
     print(out.shape)
     total_params = sum(p.numel() for p in v.parameters())
     total_buffers = sum(q.numel() for q in v.buffers())
-    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m parameters.".format(v.__class__.__name__, total_params + total_buffers))
-    total_trainable_params = sum(p.numel() for p in v.parameters() if p.requires_grad)
-    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m training parameters.".format(v.__class__.__name__, total_trainable_params))
+    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m parameters.".format(
+        v.__class__.__name__, total_params + total_buffers))
+    total_trainable_params = sum(p.numel()
+                                 for p in v.parameters() if p.requires_grad)
+    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m training parameters.".format(
+        v.__class__.__name__, total_trainable_params))
 
     from torchvision.models import resnet18
     v = resnet18()
     total_params = sum(p.numel() for p in v.parameters())
     total_buffers = sum(q.numel() for q in v.buffers())
-    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m parameters.".format(v.__class__.__name__, total_params + total_buffers))
-    total_trainable_params = sum(p.numel() for p in v.parameters() if p.requires_grad)
-    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m training parameters.".format(v.__class__.__name__, total_trainable_params))
+    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m parameters.".format(
+        v.__class__.__name__, total_params + total_buffers))
+    total_trainable_params = sum(p.numel()
+                                 for p in v.parameters() if p.requires_grad)
+    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m training parameters.".format(
+        v.__class__.__name__, total_trainable_params))

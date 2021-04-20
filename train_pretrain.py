@@ -23,13 +23,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-dataset', type=str, default='miniimagenet', choices=[
                     'miniimagenet', 'cub', 'tieredimagenet', 'fc100', 'tieredimagenet_yao', 'cifar_fs'])
 parser.add_argument('-data_dir', type=str, default=DATA_DIR)
-parser.add_argument('--model', type=str, default='resnet',
-                    help='选择要使用的backbone(为vit transformer做准备), 使用ViT作为backbone时请使用FCN模式')
 # about pre-training
 parser.add_argument('-max_epoch', type=int, default=120)
 parser.add_argument('-lr', type=float, default=0.1)
 parser.add_argument('-step_size', type=int, default=30)
-parser.add_argument('-gamma', type=float, default=0.2, help="学习率衰减效率")
 parser.add_argument('-bs', type=int, default=128)
 # about validation
 parser.add_argument('-set', type=str, default='val',
@@ -57,22 +54,29 @@ parser.add_argument('-extra_dir', type=str, default=None,
                     help='extra information that is added to checkpoint dir, e.g. hyperparameters')
 parser.add_argument('--image_size', type=int, default=84,
             help='extra information that is added to checkpoint dir, e.g. hyperparameters')
+
+parser.add_argument('--model', type=str, default='resnet',
+                    help='选择要使用的backbone(为vit transformer做准备), 使用ViT作为backbone时请使用FCN模式')
+parser.add_argument('-gamma', type=float, default=0.2, help="学习率衰减效率")
 parser.add_argument('--optim', type=str, default='SGD', help='选择优化器')
 parser.add_argument('--not_use_clstoken', action="store_true", help='viT模型可选项是否添加cls token, 默认使用')
-parser.add_argument('--vit_mode', type=str, default='cls', choices=['cls', 'mean'], help='选择使用cls token或者mean(平均所有patch)的方式')
+parser.add_argument('--vit_mode', type=str, default='cls',
+                    choices=['cls', 'mean'], help='选择使用cls token或者mean(平均所有patch)的方式')
+parser.add_argument('--vit_depth', type=int, default=4, help="使用ViT时的深度")
+parser.add_argument('--not_imagenet_pretrain', action="store_true", help="是否使用imagenet的pretrain参数")
+
+# resnet下使用注意力机制的相关参数
+parser.add_argument('--with_SA', action='store_true', help="在resnet基础上使用self-attention模式")
+parser.add_argument('--SA_heads', type=int, default=8, help="resnet使用heads的数目")
+parser.add_argument('--SA_mlp_dim', type=int, default=1024, help="resnet中SA模块使用的mlp中隐藏层的数目")
+parser.add_argument('--SA_depth', type=int, default=1, help='resnet下SA模块的层数')
+parser.add_argument('--SA_dim_head', type=int, default=64, help="resnet下SA模块每个head的维度")
+parser.add_argument('--SA_dropout', type=float, default=0.1, help="resnet下SA模块的dropout率")
 
 
 args = parser.parse_args()
+parse_tune_pretrain(args)
 pprint(vars(args))
-
-if args.model == "ViT" and args.deepemd != 'fcn':
-    print("选用ViT时未将deepemd参数置为fcn模式,当前为{}模式,将转换为fcn模式".format(args.deepemd))
-    args.deepemd = 'fcn'
-
-if args.model == "ViT" and args.image_size != '256':
-    print("选用ViT时未将image_size调整为256, 当前image size = {},将转换为256".format(args.image_size))
-    args.image_size = 256
-
 
 num_gpu = set_gpu(args)
 set_seed(args.seed)
@@ -80,19 +84,9 @@ set_seed(args.seed)
 dataset_name = args.dataset
 # args.save_path = 'pre_train/%s/%d-%.4f-%d-%.2f/' % \
 #                  (dataset_name, args.bs, args.lr, args.step_size, args.gamma)
-if args.model != "ViT":
-    args.save_path = 'pre_train/{dataset}/{model}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-        dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim)
 
-else:
-    args.save_path = 'pre_train/{dataset}/{model}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-clstoken({class_token})_vit-mode({vit_mode})'.format(
-        dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, class_token=str(not args.not_use_clstoken), vit_mode=args.vit_mode, optim=args.optim)
-
-
-args.save_path = osp.join('checkpoint', args.save_path)
-if args.extra_dir is not None:
-    args.save_path = osp.join(args.save_path, args.extra_dir)
-ensure_path(args.save_path)
+# 使用可变变量引用传参，不用显示赋值
+print_save_path(args)
 
 args.dir = 'pretrained_model/miniimagenet/max_acc.pth'
 
@@ -113,10 +107,10 @@ model = nn.DataParallel(model, list(range(num_gpu)))
 model = model.cuda()
 print_model_params(model, args)
 
-# if not args.random_val_task:
-#     print('fix val set for all epochs')
-#     val_loader = [x for x in val_loader]
-# print('save all checkpoint models:', (args.save_all is True))
+if not args.random_val_task:
+    print('fix val set for all epochs')
+    val_loader = [x for x in val_loader]
+print('save all checkpoint models:', (args.save_all is True))
 
 # label of query images.
 # shape[75]:012340123401234...
@@ -135,6 +129,7 @@ lr_scheduler = torch.optim.lr_scheduler.StepLR(
 
 
 def save_model(name):
+    # 只存储了encoder部分的state_dict()
     torch.save(dict(params=model.module.encoder.state_dict()),
                osp.join(args.save_path, name + '.pth'))
 
@@ -159,7 +154,7 @@ for epoch in range(1, args.max_epoch + 1):
     model.module.mode = 'pre_train'
     tl = Averager()
     ta = Averager()
-    # standard classification for pretrain
+    # #standard classification for pretrain
     tqdm_gen = tqdm.tqdm(train_loader)
     for i, batch in enumerate(tqdm_gen, 1):
         global_count = global_count + 1

@@ -102,3 +102,5 @@ with torch.no_grad():
     result_list.append('Test Acc {:.4f} + {:.4f}'.format(m, pm))
     print(result_list[0])
     print(result_list[1])
+    # TODO
+    # save_list_to_txt(os.path.join(args.save_path, 'results.txt'), result_list)
