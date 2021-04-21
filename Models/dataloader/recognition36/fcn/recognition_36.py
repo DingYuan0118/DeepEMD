@@ -27,17 +27,16 @@ class Recognition36(Dataset):
         self.num_class = len(set(label))
 
         if setname == 'val' or setname == 'test':
-
-            image_size = 84
+            image_size = args.image_size
             self.transform = transforms.Compose([
-                transforms.Resize([92, 92]),
+                transforms.Resize(int(image_size / 0.9)),
                 transforms.CenterCrop(image_size),
 
                 transforms.ToTensor(),
                 transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
                                      np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))])
         elif setname == 'train':
-            image_size = 84
+            image_size = args.image_size
             self.transform = transforms.Compose([
                 transforms.RandomResizedCrop(image_size),
                 transforms.RandomHorizontalFlip(),

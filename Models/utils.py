@@ -90,7 +90,7 @@ def load_model(model,dir):
         pretrained_dict = {'encoder.' + k: v for k, v in pretrained_dict.items()}  # load from a pretrained model
     pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
     model_dict.update(pretrained_dict)  # update the param in encoder, remain others still
-    model.load_state_dict(model_dict)
+    model.load_state_dict(model_dict, strict=True) # strict 默认为True
 
     return model
 
@@ -206,3 +206,4 @@ def meta_save_path(args):
     if args.extra_dir is not None:
         args.save_path = osp.join(args.save_path, args.extra_dir)
     ensure_path(args.save_path)
+    return args.save_path
