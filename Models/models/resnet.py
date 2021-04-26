@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from vit_pytorch.vit import Transformer
 from einops import rearrange
-
+from Models.models.MyAttention import ResAttention
 # This ResNet network was designed following the practice of the following papers:
 # TADAM: Task dependent adaptive metric for improved few-shot learning (Oreshkin et al., in NIPS 2018) and
 # A Simple Neural Attentive Meta-Learner (Mishra et al., in ICLR 2018).
@@ -87,10 +87,17 @@ class ResNet(nn.Module):
         self.drop_rate = drop_rate
         self.args = args
 
-        if args.with_SA:
+        if args.with_SA and not args.no_mlp:
             # 使用self attention机制
             self.transformer = Transformer(dim=640, depth=args.SA_depth, heads=args.SA_heads,
                                            dim_head=args.SA_dim_head, dropout=args.SA_dropout, mlp_dim=args.SA_mlp_dim)
+        elif args.with_SA and args.no_mlp and args.SA_res:
+            self.attention = ResAttention(dim=640, dim_head=args.SA_dim_head, dropout=args.SA_dropout, use_res=True)
+            self.SA_bn = nn.BatchNorm2d(640)
+        
+        elif args.with_SA and args.no_mlp and not args.SA_res:
+            self.attention = ResAttention(dim=640, dim_head=args.SA_dim_head, dropout=args.SA_dropout, use_res=False)
+        
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -126,12 +133,19 @@ class ResNet(nn.Module):
         x = self.layer4(x) # [bs, 640, 5, 5]
 
 
-        if self.args.with_SA:
+        if self.args.with_SA and not self.args.no_mlp:
             # 需要reshape,使用einops库的rearrange
             x = rearrange(x, 'b dim rows cols -> b (rows cols) dim')
             x = self.transformer(x)
             # 需要reshape,使用einops库的rearrange
             x = rearrange(x, 'b (rows cols) dim -> b dim rows cols', cols=int(sqrt(x.shape[1])))
+        
+        elif self.args.with_SA and self.args.no_mlp:
+            x = rearrange(x, 'b dim rows cols -> b (rows cols) dim')
+            x = self.attention(x)
+            # 需要reshape,使用einops库的rearrange
+            x = rearrange(x, 'b (rows cols) dim -> b dim rows cols', cols=int(sqrt(x.shape[1])))
+            x = self.SA_bn(x)
 
         return x
 
@@ -142,22 +156,3 @@ if __name__ == '__main__':
     input = torch.FloatTensor(5, 3, 80, 80)
     out = v(input)
     print(out.shape)
-    total_params = sum(p.numel() for p in v.parameters())
-    total_buffers = sum(q.numel() for q in v.buffers())
-    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m parameters.".format(
-        v.__class__.__name__, total_params + total_buffers))
-    total_trainable_params = sum(p.numel()
-                                 for p in v.parameters() if p.requires_grad)
-    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m training parameters.".format(
-        v.__class__.__name__, total_trainable_params))
-
-    from torchvision.models import resnet18
-    v = resnet18()
-    total_params = sum(p.numel() for p in v.parameters())
-    total_buffers = sum(q.numel() for q in v.buffers())
-    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m parameters.".format(
-        v.__class__.__name__, total_params + total_buffers))
-    total_trainable_params = sum(p.numel()
-                                 for p in v.parameters() if p.requires_grad)
-    print("\033[1;32;m{}\033[0m model have \033[1;32;m{}\033[0m training parameters.".format(
-        v.__class__.__name__, total_trainable_params))

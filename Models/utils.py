@@ -126,9 +126,18 @@ def print_save_path(args):
     # 使用可变变量引用传参，不用显示赋值
     if args.model == "resnet":
         if args.with_SA:
-            args.save_path = 'pre_train/{dataset}/{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-                dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch, depth=args.SA_depth,
-                heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim)
+            if args.no_mlp and not args.SA_res:
+                 args.save_path = 'pre_train/{dataset}/{model}_MySA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                    dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch,
+                    heads=args.SA_heads, dim_head=args.SA_dim_head)
+            elif args.no_mlp and args.SA_res:
+                args.save_path = 'pre_train/{dataset}/{model}_MyResSA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                    dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch,
+                    heads=args.SA_heads, dim_head=args.SA_dim_head)
+            else:
+                args.save_path = 'pre_train/{dataset}/{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                    dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch, depth=args.SA_depth,
+                    heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim)
         else:
             args.save_path = 'pre_train/{dataset}/{model}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
                 dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch)
@@ -152,13 +161,18 @@ def pretrain_save_path(args):
     # train_meta阶段使用，找寻pretrain model的存储地址
     if args.model == "resnet":
         if args.with_SA:
-            args.pre_save_path = 'pre_train/{dataset}/{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-                dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch, depth=args.SA_depth,
-                heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim)
-        else:
-            args.pre_save_path = 'pre_train/{dataset}/{model}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-                dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch)
-
+            if args.no_mlp and not args.SA_res:
+                 args.pre_save_path = 'pre_train/{dataset}/{model}_MySA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                    dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch,
+                    heads=args.SA_heads, dim_head=args.SA_dim_head)
+            elif args.no_mlp and args.SA_res:
+                args.pre_save_path = 'pre_train/{dataset}/{model}_MyResSA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                    dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch,
+                    heads=args.SA_heads, dim_head=args.SA_dim_head)
+            else:
+                args.pre_save_path = 'pre_train/{dataset}/{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                    dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch, depth=args.SA_depth,
+                    heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim)
     elif args.model == "ViT":
         args.pre_save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-clstoken({class_token})_vit-mode({vit_mode})'.format(
             dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, class_token=str(not args.not_use_clstoken), vit_mode=args.vit_mode, optim=args.pre_optim,

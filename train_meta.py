@@ -84,7 +84,7 @@ parser.add_argument('-extra_dir', type=str, default=None,
                     help='extra information that is added to checkpoint dir, e.g. hyperparameters')
 parser.add_argument('-seed', type=int, default=1)
 
-# 额外参数
+# =========================== 自定义额外参数 ===============================
 parser.add_argument('--model', type=str, default='resnet',
                     help='选择要使用的backbone(为vit transformer做准备), 使用ViT作为backbone时请使用FCN模式')
 parser.add_argument("--pre_lr", type=float, default=0.01, help="预训练时学习率")
@@ -100,17 +100,17 @@ parser.add_argument('--vit_mode', type=str, default='cls',
 parser.add_argument('--vit_depth', type=int, default=4, help="使用ViT时的深度")
 parser.add_argument('--not_imagenet_pretrain',
                     action="store_true", help="是否使用imagenet的pretrain参数")
-# resnet下使用注意力机制的相关参数
-parser.add_argument('--with_SA', action='store_true',
-                    help="在resnet基础上使用self-attention模式")
+# ========================= resnet下使用注意力机制的相关参数 =========================
+parser.add_argument('--with_SA', action='store_true', help="在resnet基础上使用self-attention模式")
 parser.add_argument('--SA_heads', type=int, default=8, help="resnet使用heads的数目")
-parser.add_argument('--SA_mlp_dim', type=int, default=1024,
-                    help="resnet中SA模块使用的mlp中隐藏层的数目")
+parser.add_argument('--SA_mlp_dim', type=int, default=1024, help="resnet中SA模块使用的mlp中隐藏层的数目")
 parser.add_argument('--SA_depth', type=int, default=1, help='resnet下SA模块的层数')
-parser.add_argument('--SA_dim_head', type=int, default=64,
-                    help="resnet下SA模块每个head的维度")
-parser.add_argument('--SA_dropout', type=float,
-                    default=0.1, help="resnet下SA模块的dropout率")
+parser.add_argument('--SA_dim_head', type=int, default=64, help="resnet下SA模块每个head的维度")
+parser.add_argument('--SA_dropout', type=float, default=0.1, help="resnet下SA模块的dropout率")
+parser.add_argument('--SA_res', action="store_true", help="使用残差连接")
+parser.add_argument('--no_mlp', action="store_true", help="去除mlp层")
+
+
 args = parser.parse_args()
 pprint(vars(args))
 
@@ -137,6 +137,7 @@ model = load_model(model, args.pretrain_dir)
 model = nn.DataParallel(model, list(range(num_gpu)))
 model = model.cuda()
 model.eval()
+
 
 
 meta_save_path(args)
