@@ -163,15 +163,15 @@ def pretrain_save_path(args):
         if args.with_SA:
             if args.no_mlp and not args.SA_res:
                  args.pre_save_path = 'pre_train/{dataset}/{model}_MySA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-                    dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch,
+                    dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch,
                     heads=args.SA_heads, dim_head=args.SA_dim_head)
             elif args.no_mlp and args.SA_res:
                 args.pre_save_path = 'pre_train/{dataset}/{model}_MyResSA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-                    dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch,
+                    dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch,
                     heads=args.SA_heads, dim_head=args.SA_dim_head)
             else:
                 args.pre_save_path = 'pre_train/{dataset}/{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-                    dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch, depth=args.SA_depth,
+                    dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch, depth=args.SA_depth,
                     heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim)
     elif args.model == "ViT":
         args.pre_save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-clstoken({class_token})_vit-mode({vit_mode})'.format(
@@ -216,7 +216,7 @@ def meta_save_path(args):
     epoch_index = args.pre_save_path.find("_epoch")
     args.model_path = args.pre_save_path[:epoch_index].split("/")[-1]
     args.save_path = "{dataset}/{model_path}/{shot}shot-{way}way".format(dataset=args.dataset, model_path=args.model_path, shot=args.shot, way=args.way)
-    args.save_path = osp.join('checkpoint/meta_train', args.save_path)
+    args.save_path = osp.join('checkpoint/meta_train', args.save_path + "_{}".format(args.solver))
     if args.extra_dir is not None:
         args.save_path = osp.join(args.save_path, args.extra_dir)
     ensure_path(args.save_path)

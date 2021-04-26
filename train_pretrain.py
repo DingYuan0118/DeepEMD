@@ -55,6 +55,7 @@ parser.add_argument('-extra_dir', type=str, default=None,
 parser.add_argument('--image_size', type=int, default=84,
             help='extra information that is added to checkpoint dir, e.g. hyperparameters')
 
+# ================================== 自定义的相关参数 ======================================
 parser.add_argument('--model', type=str, default='resnet',
                     help='选择要使用的backbone(为vit transformer做准备), 使用ViT作为backbone时请使用FCN模式')
 parser.add_argument('-gamma', type=float, default=0.2, help="学习率衰减效率")
