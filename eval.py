@@ -57,6 +57,7 @@ parser.add_argument('--image_size', type=int, default=84,
                     help='extra information that is added to checkpoint dir, e.g. hyperparameters')
 # ====================================自定义模型参数====================================
 # 额外参数
+parser.add_argument("--origin", action="store_true", help="使用论文参数")
 parser.add_argument('--model', type=str, default='resnet',
                     help='选择要使用的backbone(为vit transformer做准备), 使用ViT作为backbone时请使用FCN模式')
 parser.add_argument("--pre_lr", type=float, default=0.01, help="预训练时学习率")
@@ -87,23 +88,32 @@ if args.feature_pyramid is not None:
     args.feature_pyramid = [int(x) for x in args.feature_pyramid.split(',')]
 args.patch_list = [int(x) for x in args.patch_list.split(',')]
 
-parse_tune_pretrain(args)
-pretrain_save_path(args)
-_ , args.model_name = meta_save_path(args)
 
-# args.model_dir = osp.join(args.model_dir, 'max_acc.pth')
+if args.origin:
+    print("使用论文参数")
+    args.model_dir = osp.join(args.model_dir)
+    print("model dir:", args.model_dir)
 
+else:
 # 不管测试时是5shot 还是1shot，均使用5shot训练后的模型
-args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}/{shot}shot-{way}way_opencv/max_acc.pth'.format(
-    model_name=args.model_name, shot=5, way=5)
+    parse_tune_pretrain(args)
+    pretrain_save_path(args)
+    _ , args.model_name = meta_save_path(args)
+    args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}/{shot}shot-{way}way_opencv/max_acc.pth'.format(
+        model_name=args.model_name, shot=5, way=5)
+
 if os.path.exists(args.model_dir):
     print("测试阶段使用此处的模型:{}".format(args.model_dir))
 else:
     raise ValueError("未找到预训练模型")
 
+if args.origin:
+    args.res_save_path = "result/{dataset}/resnet_origin/{shot}shot-{way}way/".format(
+        dataset=args.dataset, shot=args.shot, way=args.way)
 
-args.res_save_path = "result/{dataset}/{model_name}/{shot}shot-{way}way/".format(
-    dataset=args.dataset, model_name=args.model_name, shot=args.shot, way=args.way)
+else :
+    args.res_save_path = "result/{dataset}/{model_name}/{shot}shot-{way}way/".format(
+        dataset=args.dataset, model_name=args.model_name, shot=args.shot, way=args.way)
 if os.path.exists(args.res_save_path):
     pass
 else:
@@ -132,7 +142,7 @@ test_set = Dataset(args.set, args)
 sampler = CategoriesSampler(
     test_set.label, args.test_episode, args.way, args.shot + args.query)
 loader = DataLoader(test_set, batch_sampler=sampler,
-                    num_workers=8, pin_memory=True)
+                    num_workers=0, pin_memory=True)
 tqdm_gen = tqdm.tqdm(loader)
 
 # label of query images
