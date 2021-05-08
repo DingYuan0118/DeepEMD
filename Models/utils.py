@@ -173,6 +173,9 @@ def pretrain_save_path(args):
                 args.pre_save_path = 'pre_train/{dataset}/{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
                     dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch, depth=args.SA_depth,
                     heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim)
+        else:
+            args.pre_save_path = 'pre_train/{dataset}/{model}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch)
     elif args.model == "ViT":
         args.pre_save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-clstoken({class_token})_vit-mode({vit_mode})'.format(
             dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, class_token=str(not args.not_use_clstoken), vit_mode=args.vit_mode, optim=args.pre_optim,
@@ -214,10 +217,10 @@ def parse_tune_pretrain(args):
 def meta_save_path(args):
     # meta train阶段使用
     epoch_index = args.pre_save_path.find("_epoch")
-    args.model_path = args.pre_save_path[:epoch_index].split("/")[-1]
-    args.save_path = "{dataset}/{model_path}/{shot}shot-{way}way".format(dataset=args.dataset, model_path=args.model_path, shot=args.shot, way=args.way)
+    args.model_name = args.pre_save_path[:epoch_index].split("/")[-1]
+    args.save_path = "{dataset}/{model_name}/{shot}shot-{way}way".format(dataset=args.dataset, model_name=args.model_name, shot=args.shot, way=args.way)
     args.save_path = osp.join('checkpoint/meta_train', args.save_path + "_{}".format(args.solver))
     if args.extra_dir is not None:
         args.save_path = osp.join(args.save_path, args.extra_dir)
     ensure_path(args.save_path)
-    return args.save_path
+    return args.save_path, args.model_name

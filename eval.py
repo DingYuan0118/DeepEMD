@@ -73,32 +73,34 @@ parser.add_argument('--vit_depth', type=int, default=4, help="使用ViT时的深
 parser.add_argument('--not_imagenet_pretrain',
                     action="store_true", help="是否使用imagenet的pretrain参数")
 # resnet下使用注意力机制的相关参数
-parser.add_argument('--with_SA', action='store_true',
-                    help="在resnet基础上使用self-attention模式")
+parser.add_argument('--with_SA', action='store_true', help="在resnet基础上使用self-attention模式")
 parser.add_argument('--SA_heads', type=int, default=8, help="resnet使用heads的数目")
-parser.add_argument('--SA_mlp_dim', type=int, default=1024,
-                    help="resnet中SA模块使用的mlp中隐藏层的数目")
+parser.add_argument('--SA_mlp_dim', type=int, default=1024, help="resnet中SA模块使用的mlp中隐藏层的数目")
 parser.add_argument('--SA_depth', type=int, default=1, help='resnet下SA模块的层数')
-parser.add_argument('--SA_dim_head', type=int, default=64,
-                    help="resnet下SA模块每个head的维度")
-parser.add_argument('--SA_dropout', type=float,
-                    default=0.1, help="resnet下SA模块的dropout率")
+parser.add_argument('--SA_dim_head', type=int, default=64, help="resnet下SA模块每个head的维度")
+parser.add_argument('--SA_dropout', type=float, default=0.1, help="resnet下SA模块的dropout率")
+parser.add_argument('--SA_res', action="store_true", help="使用残差连接")
+parser.add_argument('--no_mlp', action="store_true", help="去除mlp层")
 # ====================================自定义模型参数====================================
 args = parser.parse_args()
 if args.feature_pyramid is not None:
     args.feature_pyramid = [int(x) for x in args.feature_pyramid.split(',')]
 args.patch_list = [int(x) for x in args.patch_list.split(',')]
 
-if args.model == "resnet":
-    if args.with_SA:
-        args.model_name = '{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})'.format(
-            model=args.model, depth=args.SA_depth, heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim)
-    else:
-        args.model_name = '{model}'.format(model=args.model)
+parse_tune_pretrain(args)
+pretrain_save_path(args)
+_ , args.model_name = meta_save_path(args)
+
+# args.model_dir = osp.join(args.model_dir, 'max_acc.pth')
 
 # 不管测试时是5shot 还是1shot，均使用5shot训练后的模型
-args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}/{shot}shot-{way}way/max_acc.pth'.format(
+args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}/{shot}shot-{way}way_opencv/max_acc.pth'.format(
     model_name=args.model_name, shot=5, way=5)
+if os.path.exists(args.model_dir):
+    print("测试阶段使用此处的模型:{}".format(args.model_dir))
+else:
+    raise ValueError("未找到预训练模型")
+
 
 args.res_save_path = "result/{dataset}/{model_name}/{shot}shot-{way}way/".format(
     dataset=args.dataset, model_name=args.model_name, shot=args.shot, way=args.way)
