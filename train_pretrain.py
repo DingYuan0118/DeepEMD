@@ -235,7 +235,7 @@ for epoch in range(1, args.max_epoch + 1):
     result_list.append(
         'epoch:%03d,training_loss:%.5f,training_acc:%.5f,val_loss:%.5f,val_acc:%.5f' % (epoch, tl, ta, vl, va))
     torch.save(trlog, osp.join(args.save_path, 'trlog'))
-    if args.save_all:
+    if args.save_all and epoch % 30 == 0:
         save_model('epoch-%d' % epoch)
         torch.save(optimizer.state_dict(), osp.join(
             args.save_path, 'optimizer_latest.pth'))

@@ -9,30 +9,30 @@ import random
 
 from torch.utils.data import dataset
 
-def save_list_to_txt(name,input_list):
-    f=open(name,mode='w')
+
+def save_list_to_txt(name, input_list):
+    f = open(name, mode='a')
     for item in input_list:
         f.write(item+'\n')
     f.close()
 
+
 def set_gpu(args):
     gpu_list = [int(x) for x in args.gpu.split(',')]
-    print ('use gpu:',gpu_list)
+    print('use gpu:', gpu_list)
     os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     return gpu_list.__len__()
-
-
-
 
 
 def ensure_path(path):
     if os.path.exists(path):
         pass
     else:
-        print ('create folder:',path)
+        print('create folder:', path)
         os.makedirs(path)
     print("save path: ", path)
+
 
 class Averager():
 
@@ -56,11 +56,12 @@ def count_acc(logits, label):
         return (pred == label).type(torch.FloatTensor).mean().item()
 
 
-
-
 _utils_pp = pprint.PrettyPrinter()
+
+
 def pprint(x):
     _utils_pp.pprint(x)
+
 
 def compute_confidence_interval(data):
     """
@@ -75,12 +76,11 @@ def compute_confidence_interval(data):
     return m, pm
 
 
-
-def load_model(model,dir):
+def load_model(model, dir):
     model_dict = model.state_dict()
     print('loading model from :', dir)
     pretrained_dict = torch.load(dir)['params']
-    if 'encoder' in list(pretrained_dict.keys())[0]:  
+    if 'encoder' in list(pretrained_dict.keys())[0]:
         # load from a parallel meta-trained model
         if 'module' in list(pretrained_dict.keys())[0]:
             pretrained_dict = {k[7:]: v for k, v in pretrained_dict.items()}
@@ -90,7 +90,7 @@ def load_model(model,dir):
         pretrained_dict = {'encoder.' + k: v for k, v in pretrained_dict.items()}  # load from a pretrained model
     pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
     model_dict.update(pretrained_dict)  # update the param in encoder, remain others still
-    model.load_state_dict(model_dict, strict=True) # strict 默认为True
+    model.load_state_dict(model_dict, strict=True)  # strict 默认为True
 
     return model
 
@@ -108,10 +108,12 @@ def set_seed(seed):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
+
 def detect_grad_nan(model):
     for param in model.parameters():
         if (param.grad != param.grad).float().sum() != 0:  # nan detected
             param.grad.zero_()
+
 
 def print_model_params(model, params):
     total_params = sum(p.numel() for p in model.parameters())
@@ -120,6 +122,7 @@ def print_model_params(model, params):
     total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print("\033[1;32;m{}\033[0m model \033[1;32;m{}\033[0m backbone have \033[1;32;m{}\033[0m training parameters.".format(model.__class__.__name__, params.model, total_trainable_params))
 
+
 def print_save_path(args):
     # pretrain阶段使用
     # 打印储存空间
@@ -127,7 +130,7 @@ def print_save_path(args):
     if args.model == "resnet":
         if args.with_SA:
             if args.no_mlp and not args.SA_res:
-                 args.save_path = 'pre_train/{dataset}/{model}_MySA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                args.save_path = 'pre_train/{dataset}/{model}_MySA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
                     dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch,
                     heads=args.SA_heads, dim_head=args.SA_dim_head)
             elif args.no_mlp and args.SA_res:
@@ -149,7 +152,7 @@ def print_save_path(args):
 
     elif args.model == "vit_small_patch16_224":
         args.save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-imagenet-params({imagenet_pretrain}))'.format(
-            dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim,epoch=args.max_epoch, depth=args.vit_depth, imagenet_pretrain=str(not args.not_imagenet_pretrain))
+            dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch, depth=args.vit_depth, imagenet_pretrain=str(not args.not_imagenet_pretrain))
 
     args.save_path = osp.join('checkpoint', args.save_path)
     if args.extra_dir is not None:
@@ -157,12 +160,13 @@ def print_save_path(args):
     ensure_path(args.save_path)
     return args.save_path
 
+
 def pretrain_save_path(args):
     # train_meta阶段使用，找寻pretrain model的存储地址
     if args.model == "resnet":
         if args.with_SA:
             if args.no_mlp and not args.SA_res:
-                 args.pre_save_path = 'pre_train/{dataset}/{model}_MySA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
+                args.pre_save_path = 'pre_train/{dataset}/{model}_MySA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
                     dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch,
                     heads=args.SA_heads, dim_head=args.SA_dim_head)
             elif args.no_mlp and args.SA_res:
@@ -183,7 +187,7 @@ def pretrain_save_path(args):
 
     elif args.model == "vit_small_patch16_224":
         args.pre_save_path = 'pre_train/{dataset}/{model}_depth{depth}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}_use-imagenet-params({imagenet_pretrain}))'.format(
-            dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim,epoch=args.pre_epoch, depth=args.vit_depth, imagenet_pretrain=str(not args.not_imagenet_pretrain))
+            dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch, depth=args.vit_depth, imagenet_pretrain=str(not args.not_imagenet_pretrain))
 
     args.pre_save_path = osp.join('checkpoint', args.pre_save_path)
     if args.extra_dir is not None:
@@ -193,6 +197,7 @@ def pretrain_save_path(args):
     else:
         raise ValueError("没有该路径:{}".format(args.pre_save_path))
     return args.pre_save_path
+
 
 def parse_tune_pretrain(args):
     if args.model == "ViT" and args.deepemd != 'fcn':
@@ -214,13 +219,28 @@ def parse_tune_pretrain(args):
     if args.model == 'resnet' and args.with_SA:
         print("使用带self attention的resnet")
 
+
 def meta_save_path(args):
     # meta train阶段使用
     epoch_index = args.pre_save_path.find("_epoch")
     args.model_name = args.pre_save_path[:epoch_index].split("/")[-1]
-    args.save_path = "{dataset}/{model_name}/{shot}shot-{way}way".format(dataset=args.dataset, model_name=args.model_name, shot=args.shot, way=args.way)
+    args.save_path = "{dataset}/{model_name}_SFC{sfc_update_step}/{shot}shot-{way}way".format(dataset=args.dataset,
+                                                                                              model_name=args.model_name, shot=args.shot, way=args.way, sfc_update_step=int(args.sfc_update_step))
     args.save_path = osp.join('checkpoint/meta_train', args.save_path + "_{}".format(args.solver))
     if args.extra_dir is not None:
         args.save_path = osp.join(args.save_path, args.extra_dir)
     ensure_path(args.save_path)
     return args.save_path, args.model_name
+
+def format_model_name(args):
+    if args.model_name == "resnet_MyResSA":
+        args.model_name = args.model_name + "({}_{})".format(args.SA_heads, args.SA_dim_head)
+
+    elif args.model_name == "resnet":
+        pass
+
+    else:
+        # TODO: 实现其他方法
+        print("")
+        raise ValueError("没有该model_name")
+

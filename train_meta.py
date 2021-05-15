@@ -74,7 +74,7 @@ parser.add_argument('-sfc_lr', type=float, default=0.1,
                     help='learning rate of SFC')
 parser.add_argument('-sfc_wd', type=float, default=0,
                     help='weight decay for SFC weight')
-parser.add_argument('-sfc_update_step', type=float,
+parser.add_argument('-sfc_update_step', type=int,
                     default=100, help='number of updating step of SFC')
 parser.add_argument('-sfc_bs', type=int, default=4,
                     help='batch size for finetune sfc')
@@ -291,7 +291,7 @@ for epoch in range(1, args.max_epoch + 1):
         epoch, tl, ta, vl, va))
 
     torch.save(trlog, osp.join(args.save_path, 'trlog'))
-    if args.save_all:
+    if args.save_all and epoch % 30 == 0:
         save_model('epoch-%d' % epoch)
         torch.save(optimizer.state_dict(), osp.join(
             args.save_path, 'optimizer_latest.pth'))

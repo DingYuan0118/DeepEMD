@@ -43,7 +43,7 @@ parser.add_argument('-solver', type=str, default='opencv', choices=['opencv'])
 parser.add_argument('-sfc_lr', type=float, default=100)
 parser.add_argument('-sfc_wd', type=float, default=0,
                     help='weight decay for SFC weight')
-parser.add_argument('-sfc_update_step', type=float, default=100)
+parser.add_argument('-sfc_update_step', type=int, default=100)
 parser.add_argument('-sfc_bs', type=int, default=4)
 # others
 parser.add_argument('-test_episode', type=int, default=1000)
@@ -60,6 +60,7 @@ parser.add_argument('--image_size', type=int, default=84,
 parser.add_argument("--origin", action="store_true", help="使用论文参数")
 parser.add_argument('--model', type=str, default='resnet',
                     help='选择要使用的backbone(为vit transformer做准备), 使用ViT作为backbone时请使用FCN模式')
+parser.add_argument("--model_name", type=str, default="resnet", help="用于选择使用的模型")
 parser.add_argument("--pre_lr", type=float, default=0.01, help="预训练时学习率")
 parser.add_argument('--pre_gamma', type=float, default=0.2, help="预训练时学习率衰减效率")
 parser.add_argument('--pre_optim', type=str, default='SGD', help='预训练时选择优化器')
@@ -95,12 +96,14 @@ if args.origin:
     print("model dir:", args.model_dir)
 
 else:
-# 不管测试时是5shot 还是1shot，均使用5shot训练后的模型
-    parse_tune_pretrain(args)
-    pretrain_save_path(args)
-    _ , args.model_name = meta_save_path(args)
-    args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}/{shot}shot-{way}way_opencv/max_acc.pth'.format(
-        model_name=args.model_name, shot=5, way=5)
+    format_model_name(args)
+# 不管测试时是5shot 还是1shot，均使用5shot训练后的模型(停用，现使用对应模型)
+    if args.sfc_update_step == 100:
+        args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}/{shot}shot-{way}way_opencv/max_acc.pth'.format(
+            model_name=args.model_name, shot=args.shot, way=5)
+    else:
+        args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}_SFC{sfc_update_step}/{shot}shot-{way}way_opencv/max_acc.pth'.format(
+            model_name=args.model_name, shot=args.shot, way=5, sfc_update_step=args.sfc_update_step) 
 
 if os.path.exists(args.model_dir):
     print("测试阶段使用此处的模型:{}".format(args.model_dir))
@@ -112,8 +115,13 @@ if args.origin:
         dataset=args.dataset, shot=args.shot, way=args.way)
 
 else :
-    args.res_save_path = "result/{dataset}/{model_name}/{shot}shot-{way}way/".format(
-        dataset=args.dataset, model_name=args.model_name, shot=args.shot, way=args.way)
+    if args.sfc_update_step == 100:
+        args.res_save_path = "result/{dataset}/{model_name}/{shot}shot-{way}way/".format(
+            dataset=args.dataset, model_name=args.model_name, shot=args.shot, way=args.way)
+    else:
+        args.res_save_path = "result/{dataset}/{model_name}_SFC{sfc_update_step}/{shot}shot-{way}way/".format(
+            dataset=args.dataset, model_name=args.model_name, shot=args.shot, way=args.way, sfc_update_step=args.sfc_update_step)
+
 if os.path.exists(args.res_save_path):
     pass
 else:
