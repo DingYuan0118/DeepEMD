@@ -92,11 +92,11 @@ class ResNet(nn.Module):
             self.transformer = Transformer(dim=640, depth=args.SA_depth, heads=args.SA_heads,
                                            dim_head=args.SA_dim_head, dropout=args.SA_dropout, mlp_dim=args.SA_mlp_dim)
         elif args.with_SA and args.no_mlp and args.SA_res:
-            self.attention = ResAttention(dim=640, dim_head=args.SA_dim_head, dropout=args.SA_dropout, heads=args.SA_heads, use_res=True)
+            self.attention = ResAttention(dim=640, dim_head=args.SA_dim_head, dropout=args.SA_dropout, heads=args.SA_heads, use_res=True, pos_embed=args.pos_embed)
             self.SA_bn = nn.BatchNorm2d(640)
         
         elif args.with_SA and args.no_mlp and not args.SA_res:
-            self.attention = ResAttention(dim=640, dim_head=args.SA_dim_head, dropout=args.SA_dropout, heads=args.SA_heads, use_res=False)
+            self.attention = ResAttention(dim=640, dim_head=args.SA_dim_head, dropout=args.SA_dropout, heads=args.SA_heads, use_res=False, pos_embed=args.pos_embed)
         
 
         for m in self.modules():

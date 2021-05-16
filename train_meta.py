@@ -83,6 +83,7 @@ parser.add_argument('-gpu', default='0,1')
 parser.add_argument('-extra_dir', type=str, default=None,
                     help='extra information that is added to checkpoint dir, e.g. hyperparameters')
 parser.add_argument('-seed', type=int, default=1)
+parser.add_argument('--weight_decay', type=float, default=0.0005, help="meta train 使用的weight decay")
 
 # =========================== 自定义额外参数 ===============================
 parser.add_argument('--model', type=str, default='resnet',
@@ -93,6 +94,8 @@ parser.add_argument('--pre_optim', type=str, default='SGD', help='预训练时�
 parser.add_argument("--pre_epoch", type=int, default=120, help='预训练使用的epoch数')
 parser.add_argument('--pre_step_size', type=int,
                     default=30, help='预训练使用的step_size')
+parser.add_argument('--pre_weight_decay', type=float,
+                    default=0.0005, help='预训练使用的weight_decay')
 parser.add_argument('--not_use_clstoken', action="store_true",
                     help='viT模型可选项是否添加cls token, 默认使用')
 parser.add_argument('--vit_mode', type=str, default='cls',
@@ -109,6 +112,7 @@ parser.add_argument('--SA_dim_head', type=int, default=64, help="resnet下SA模�
 parser.add_argument('--SA_dropout', type=float, default=0.1, help="resnet下SA模块的dropout率")
 parser.add_argument('--SA_res', action="store_true", help="使用残差连接")
 parser.add_argument('--no_mlp', action="store_true", help="去除mlp层")
+parser.add_argument('--pos_embed', action="store_true", help="加入相对位置编码(relative position embedding)")
 
 
 args = parser.parse_args()
@@ -141,6 +145,10 @@ model.eval()
 
 
 meta_save_path(args)
+with open(os.path.join(args.save_path, "config.txt"), "w") as fileob:
+    print("pre weight decay:{}, SA_dropout:{}".format(args.pre_weight_decay, args.SA_dropout), file=fileob)
+    print("meta weight decay:{}".format(args.weight_decay), file=fileob)
+
 # args.save_path = '%s/%s/%dshot-%dway/'%(args.dataset,args.deepemd,args.shot,args.way)
 # args.save_path = '%s/%s/%s/%dshot-%dway/' % (
 #     args.dataset, args.deepemd, args.solver, args.shot, args.way)
@@ -175,7 +183,7 @@ label = label.type(torch.LongTensor)
 label = label.cuda()
 
 
-optimizer = torch.optim.SGD([{'params': model.parameters(), 'lr': args.lr}], momentum=0.9, nesterov=True, weight_decay=0.0005)
+optimizer = torch.optim.SGD([{'params': model.parameters(), 'lr': args.lr}], momentum=0.9, nesterov=True, weight_decay=args.weight_decay)
 lr_scheduler = torch.optim.lr_scheduler.StepLR(
     optimizer, step_size=args.step_size, gamma=args.gamma)
 

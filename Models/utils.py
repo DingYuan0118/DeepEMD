@@ -87,9 +87,13 @@ def load_model(model, dir):
         else:
             pretrained_dict = {k: v for k, v in pretrained_dict.items()}
     else:
-        pretrained_dict = {'encoder.' + k: v for k, v in pretrained_dict.items()}  # load from a pretrained model
-    pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-    model_dict.update(pretrained_dict)  # update the param in encoder, remain others still
+        # load from a pretrained model
+        pretrained_dict = {'encoder.' + k: v for k,
+                           v in pretrained_dict.items()}
+    pretrained_dict = {k: v for k,
+                       v in pretrained_dict.items() if k in model_dict}
+    # update the param in encoder, remain others still
+    model_dict.update(pretrained_dict)
     model.load_state_dict(model_dict, strict=True)  # strict 默认为True
 
     return model
@@ -118,29 +122,35 @@ def detect_grad_nan(model):
 def print_model_params(model, params):
     total_params = sum(p.numel() for p in model.parameters())
     total_buffers = sum(q.numel() for q in model.buffers())
-    print("\033[1;32;m{}\033[0m model \033[1;32;m{}\033[0m backbone have \033[1;32;m{}\033[0m parameters.".format(model.__class__.__name__, params.model, total_params + total_buffers))
-    total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print("\033[1;32;m{}\033[0m model \033[1;32;m{}\033[0m backbone have \033[1;32;m{}\033[0m training parameters.".format(model.__class__.__name__, params.model, total_trainable_params))
+    print("\033[1;32;m{}\033[0m model \033[1;32;m{}\033[0m backbone have \033[1;32;m{}\033[0m parameters.".format(
+        model.__class__.__name__, params.model, total_params + total_buffers))
+    total_trainable_params = sum(p.numel()
+                                 for p in model.parameters() if p.requires_grad)
+    print("\033[1;32;m{}\033[0m model \033[1;32;m{}\033[0m backbone have \033[1;32;m{}\033[0m training parameters.".format(
+        model.__class__.__name__, params.model, total_trainable_params))
 
 
 def print_save_path(args):
     # pretrain阶段使用
     # 打印储存空间
     # 使用可变变量引用传参，不用显示赋值
+    args.train_type = "epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}".format(
+        lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch)
     if args.model == "resnet":
         if args.with_SA:
             if args.no_mlp and not args.SA_res:
-                args.save_path = 'pre_train/{dataset}/{model}_MySA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-                    dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch,
-                    heads=args.SA_heads, dim_head=args.SA_dim_head)
+                args.model_type = "{model}_MySA({heads}_{dim_head})".format(
+                    model=args.model, heads=args.SA_heads, dim_head=args.SA_dim_head)
             elif args.no_mlp and args.SA_res:
-                args.save_path = 'pre_train/{dataset}/{model}_MyResSA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-                    dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch,
-                    heads=args.SA_heads, dim_head=args.SA_dim_head)
-            else:
-                args.save_path = 'pre_train/{dataset}/{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-                    dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch, depth=args.SA_depth,
-                    heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim)
+                args.model_type = "{model}_MyResSA({heads}_{dim_head})".format(
+                    model=args.model, heads=args.SA_heads, dim_head=args.SA_dim_head)
+            else:          
+                args.model_type = "{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})".format(
+                    model=args.model, heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim, depth=args.SA_depth)
+            if args.pos_embed:
+                args.model_type += "_pos-embed"
+            args.save_path = "pre_train/{dataset}/".format(dataset=args.dataset) + args.model_type + "_" + args.train_type
+
         else:
             args.save_path = 'pre_train/{dataset}/{model}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
                 dataset=args.dataset, model=args.model, lr=args.lr, stepsize=args.step_size, gamma=args.gamma, imagesize=args.image_size, optim=args.optim, epoch=args.max_epoch)
@@ -163,20 +173,23 @@ def print_save_path(args):
 
 def pretrain_save_path(args):
     # train_meta阶段使用，找寻pretrain model的存储地址
+    args.train_type = "epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}".format(
+        lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch)
     if args.model == "resnet":
         if args.with_SA:
             if args.no_mlp and not args.SA_res:
-                args.pre_save_path = 'pre_train/{dataset}/{model}_MySA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-                    dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch,
-                    heads=args.SA_heads, dim_head=args.SA_dim_head)
+                args.model_type = "{model}_MySA({heads}_{dim_head})".format(
+                    model=args.model, heads=args.SA_heads, dim_head=args.SA_dim_head)
             elif args.no_mlp and args.SA_res:
-                args.pre_save_path = 'pre_train/{dataset}/{model}_MyResSA({heads}_{dim_head})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-                    dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch,
-                    heads=args.SA_heads, dim_head=args.SA_dim_head)
-            else:
-                args.pre_save_path = 'pre_train/{dataset}/{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
-                    dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch, depth=args.SA_depth,
-                    heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim)
+                args.model_type = "{model}_MyResSA({heads}_{dim_head})".format(
+                    model=args.model, heads=args.SA_heads, dim_head=args.SA_dim_head)
+            else:          
+                args.model_type = "{model}_SA({depth}_{heads}_{dim_head}_{mlp_dim})".format(
+                    model=args.model, heads=args.SA_heads, dim_head=args.SA_dim_head, mlp_dim=args.SA_mlp_dim, depth=args.SA_depth)
+            if args.pos_embed:
+                args.model_type += "_pos-embed"
+            args.pre_save_path = "pre_train/{dataset}/".format(dataset=args.dataset) + args.model_type + "_" + args.train_type
+
         else:
             args.pre_save_path = 'pre_train/{dataset}/{model}_epoch{epoch}_optim{optim}_lr{lr:.4f}_stepsize{stepsize}_gamma{gamma:.2f}_imagesize{imagesize}'.format(
                 dataset=args.dataset, model=args.model, lr=args.pre_lr, stepsize=args.pre_step_size, gamma=args.pre_gamma, imagesize=args.image_size, optim=args.pre_optim, epoch=args.pre_epoch)
@@ -205,15 +218,18 @@ def parse_tune_pretrain(args):
         args.deepemd = 'fcn'
 
     if args.model == "ViT" and args.image_size != '256':
-        print("选用ViT时未将image_size调整为256, 当前image size = {},将转换为256".format(args.image_size))
+        print("选用ViT时未将image_size调整为256, 当前image size = {},将转换为256".format(
+            args.image_size))
         args.image_size = 256
 
     if args.model == "vit_small_patch16_224" and args.image_size != '224':
-        print("选用vit_small_patch16_224时未将image_size调整为224, 当前image size = {},将转换为224".format(args.image_size))
+        print("选用vit_small_patch16_224时未将image_size调整为224, 当前image size = {},将转换为224".format(
+            args.image_size))
         args.image_size = 224
 
     if args.model == 'resnet' and args.image_size != '84':
-        print("选用resnet时未将image_size调整为84, 当前image size = {},将转换为84".format(args.image_size))
+        print("选用resnet时未将image_size调整为84, 当前image size = {},将转换为84".format(
+            args.image_size))
         args.image_size = 84
 
     if args.model == 'resnet' and args.with_SA:
@@ -224,17 +240,24 @@ def meta_save_path(args):
     # meta train阶段使用
     epoch_index = args.pre_save_path.find("_epoch")
     args.model_name = args.pre_save_path[:epoch_index].split("/")[-1]
-    args.save_path = "{dataset}/{model_name}_SFC{sfc_update_step}/{shot}shot-{way}way".format(dataset=args.dataset,
-                                                                                              model_name=args.model_name, shot=args.shot, way=args.way, sfc_update_step=int(args.sfc_update_step))
-    args.save_path = osp.join('checkpoint/meta_train', args.save_path + "_{}".format(args.solver))
+    if args.sfc_update_step == 100:
+        args.save_path = "{dataset}/{model_name}/{shot}shot-{way}way".format(dataset=args.dataset,
+                        model_name=args.model_name, shot=args.shot, way=args.way, sfc_update_step=int(args.sfc_update_step))
+    else:
+        args.save_path = "{dataset}/{model_name}/{shot}shot-{way}way_SFC{sfc_update_step}".format(dataset=args.dataset,
+                        model_name=args.model_name, shot=args.shot, way=args.way, sfc_update_step=int(args.sfc_update_step))
+    args.save_path = osp.join('checkpoint/meta_train',
+                              args.save_path + "_{}".format(args.solver))
     if args.extra_dir is not None:
         args.save_path = osp.join(args.save_path, args.extra_dir)
     ensure_path(args.save_path)
     return args.save_path, args.model_name
 
+
 def format_model_name(args):
     if args.model_name == "resnet_MyResSA":
-        args.model_name = args.model_name + "({}_{})".format(args.SA_heads, args.SA_dim_head)
+        args.model_name = args.model_name + \
+            "({}_{})".format(args.SA_heads, args.SA_dim_head)
 
     elif args.model_name == "resnet":
         pass
@@ -243,4 +266,3 @@ def format_model_name(args):
         # TODO: 实现其他方法
         print("")
         raise ValueError("没有该model_name")
-

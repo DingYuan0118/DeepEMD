@@ -76,6 +76,7 @@ parser.add_argument('--SA_dim_head', type=int, default=64, help="resnet下SA模�
 parser.add_argument('--SA_dropout', type=float, default=0.1, help="resnet下SA模块的dropout率")
 parser.add_argument('--SA_res', action="store_true", help="使用残差连接")
 parser.add_argument('--no_mlp', action="store_true", help="去除mlp层")
+parser.add_argument('--pos_embed', action="store_true", help="加入相对位置编码(relative position embedding)")
 
 
 args = parser.parse_args()
@@ -91,6 +92,8 @@ dataset_name = args.dataset
 
 # 使用可变变量引用传参，不用显示赋值
 print_save_path(args)
+with open(os.path.join(args.save_path, "config.txt"), "w") as fileob:
+    print("weight decay:{}, SA_dropout:{}".format(args.weight_decay, args.SA_dropout), file=fileob)
 
 args.dir = 'pretrained_model/miniimagenet/max_acc.pth'
 
