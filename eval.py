@@ -83,6 +83,7 @@ parser.add_argument('--SA_dim_head', type=int, default=64, help="resnet下SA模�
 parser.add_argument('--SA_dropout', type=float, default=0.1, help="resnet下SA模块的dropout率")
 parser.add_argument('--SA_res', action="store_true", help="使用残差连接")
 parser.add_argument('--no_mlp', action="store_true", help="去除mlp层")
+parser.add_argument('--pos_embed', action="store_true", help="加入相对位置编码(relative position embedding)")
 # ====================================自定义模型参数====================================
 args = parser.parse_args()
 if args.feature_pyramid is not None:
@@ -102,7 +103,7 @@ else:
         args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}/{shot}shot-{way}way_opencv/max_acc.pth'.format(
             model_name=args.model_name, shot=args.shot, way=5)
     else:
-        args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}_SFC{sfc_update_step}/{shot}shot-{way}way_opencv/max_acc.pth'.format(
+        args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}/{shot}shot-{way}way_SFC{sfc_update_step}_opencv/max_acc.pth'.format(
             model_name=args.model_name, shot=args.shot, way=5, sfc_update_step=args.sfc_update_step) 
 
 if os.path.exists(args.model_dir):

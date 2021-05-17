@@ -258,6 +258,8 @@ def format_model_name(args):
     if args.model_name == "resnet_MyResSA":
         args.model_name = args.model_name + \
             "({}_{})".format(args.SA_heads, args.SA_dim_head)
+        if args.pos_embed:
+            args.model_name += "_pos-embed"
 
     elif args.model_name == "resnet":
         pass
