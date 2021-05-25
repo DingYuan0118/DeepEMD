@@ -149,6 +149,8 @@ with open(os.path.join(args.save_path, "config.txt"), "w") as fileob:
     print("pre weight decay:{}, SA_dropout:{}".format(args.pre_weight_decay, args.SA_dropout), file=fileob)
     print("meta weight decay:{}".format(args.weight_decay), file=fileob)
 
+with open(os.path.join(args.save_path, "args.txt"), "w") as fileob:
+    print(vars(args), file=fileob)
 # args.save_path = '%s/%s/%dshot-%dway/'%(args.dataset,args.deepemd,args.shot,args.way)
 # args.save_path = '%s/%s/%s/%dshot-%dway/' % (
 #     args.dataset, args.deepemd, args.solver, args.shot, args.way)
