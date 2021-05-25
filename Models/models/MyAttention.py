@@ -38,7 +38,6 @@ class ResAttention(Attention):
 
 
             trunc_normal_(self.relative_position_bias_table, std=.02)
-            self.softmax = nn.Softmax(dim=-1)
 
 
     def forward(self, x):

@@ -12,7 +12,7 @@ from torchvision import transforms
 class CUB(Dataset):
 
     def __init__(self, setname, args=None):
-        IMAGE_PATH = os.path.join(args.data_dir, 'cub/')
+        IMAGE_PATH = os.path.join(args.data_dir, 'cub/images')
         SPLIT_PATH = os.path.join(args.data_dir, 'cub/split/')
         txt_path = osp.join(SPLIT_PATH, setname + '.csv')
         lines = [x.strip() for x in open(txt_path, 'r').readlines()][1:]
