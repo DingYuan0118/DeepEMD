@@ -55,6 +55,14 @@ def set_up_datasets(args):
             from Models.dataloader.recognition36_crop.sampling.recognition36_crop import recognition36Crop as Dataset
         elif args.deepemd == 'grid':
             from Models.dataloader.recognition36_crop.grid.recognition36_crop import recognition36Crop as Dataset
+    elif args.dataset == 'cars':
+        args.num_class = 100
+        if args.deepemd == 'fcn':
+            from Models.dataloader.cars.fcn.cars import cars as Dataset
+        elif args.deepemd == 'sampling':
+            from Models.dataloader.cars.sampling.cars import cars as Dataset
+        elif args.deepemd == 'grid':
+            from Models.dataloader.cars.grid.cars import cars as Dataset
     else:
         raise ValueError('Unkown Dataset')
     return Dataset

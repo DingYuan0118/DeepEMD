@@ -21,7 +21,7 @@ parser.add_argument('-shot', type=int, default=1)
 # number of query image per class
 parser.add_argument('-query', type=int, default=15)
 parser.add_argument('-dataset', type=str, default='miniimagenet', choices=['miniimagenet', 'cub', 'tieredimagenet', 'fc100',
-                                                                           'tieredimagenet_yao', 'cifar_fs', 'recognition36', 'recognition36_crop'])  # 增加自定义数据集
+                                                                           'tieredimagenet_yao', 'cifar_fs', 'recognition36', 'recognition36_crop', 'cars'])  # 增加自定义数据集
 parser.add_argument('-set', type=str, default='test',
                     choices=['train', 'val', 'test'])
 # about model
@@ -100,12 +100,12 @@ else:
     format_model_name(args)
     # 不再meta train 5way 5shot，（浪费时间）
 # 不管测试时是5shot 还是1shot，均使用1shot训练后的模型(停用，现使用对应模型)
-    if args.sfc_update_step == 100:
-        args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}/{shot}shot-{way}way_opencv/max_acc.pth'.format(
-            model_name=args.model_name, shot=1, way=5)
-    else:
-        args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}/{shot}shot-{way}way_SFC{sfc_update_step}_opencv/max_acc.pth'.format(
-            model_name=args.model_name, shot=1, way=5, sfc_update_step=args.sfc_update_step) 
+    # if args.sfc_update_step == 100:
+args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}/{shot}shot-{way}way_opencv/max_acc.pth'.format(
+    model_name=args.model_name, shot=1, way=5)
+    # else:
+    #     args.model_dir = 'checkpoint/meta_train/miniimagenet/{model_name}/{shot}shot-{way}way_opencv/max_acc.pth'.format(
+    #         model_name=args.model_name, shot=1, way=5, sfc_update_step=args.sfc_update_step) 
 
 if os.path.exists(args.model_dir):
     print("测试阶段使用此处的模型:{}".format(args.model_dir))
@@ -121,7 +121,7 @@ else :
         args.res_save_path = "result/{dataset}/{model_name}/{shot}shot-{way}way/".format(
             dataset=args.dataset, model_name=args.model_name, shot=args.shot, way=args.way)
     else:
-        args.res_save_path = "result/{dataset}/{model_name}_SFC{sfc_update_step}/{shot}shot-{way}way/".format(
+        args.res_save_path = "result/{dataset}/{model_name}/{shot}shot-{way}way_SFC{sfc_update_step}/".format(
             dataset=args.dataset, model_name=args.model_name, shot=args.shot, way=args.way, sfc_update_step=args.sfc_update_step)
 
 if os.path.exists(args.res_save_path):
