@@ -106,6 +106,7 @@ venv.bak/
 *.jpg
 .vscode/
 checkpoint/
+checkpoint_mmd/
 mini*.zip
 deepemd_pretrain_model/*
 test.py
