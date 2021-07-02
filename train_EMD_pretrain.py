@@ -66,6 +66,7 @@ parser.add_argument('--vit_mode', type=str, default='cls',
 parser.add_argument('--vit_depth', type=int, default=4, help="使用ViT时的深度")
 parser.add_argument('--not_imagenet_pretrain', action="store_true", help="是否使用imagenet的pretrain参数")
 parser.add_argument('--weight_decay', type=float, default=0.0005,help="权重衰减参数")
+parser.add_argument('--sche', type=str,default="StepLR" ,choices=['StepLR', 'CosineLR'], help="使用StepLR或者CosineAnnealingLR scheduler")
 
 # ================================== resnet下使用注意力机制的相关参数 ======================================
 parser.add_argument('--with_SA', action='store_true', help="在resnet基础上使用self-attention模式")
@@ -138,8 +139,13 @@ if args.optim == 'SGD':
 elif args.optim == 'Adam':
     optimizer = torch.optim.Adam(model.module.parameters(),lr=args.lr, weight_decay=0.0005)
 
-lr_scheduler = torch.optim.lr_scheduler.StepLR(
-    optimizer, step_size=args.step_size, gamma=args.gamma)
+
+if args.sche == "StepLR":
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=args.step_size, gamma=args.gamma)
+
+elif args.sche == "CosineLR":
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.max_epoch, eta_min=0)
 
 
 def save_model(name):
