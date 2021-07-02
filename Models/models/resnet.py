@@ -2,9 +2,11 @@ from math import sqrt
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
+from torch.nn.modules import padding
 from vit_pytorch.vit import Transformer
 from einops import rearrange
 from Models.models.MyAttention import ResAttention
+from mmcv.ops import DeformConv2dPack
 # This ResNet network was designed following the practice of the following papers:
 # TADAM: Task dependent adaptive metric for improved few-shot learning (Oreshkin et al., in NIPS 2018) and
 # A Simple Neural Attentive Meta-Learner (Mishra et al., in ICLR 2018).
@@ -15,8 +17,16 @@ def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
 
+def deform_conv3x3(in_planes, out_planes, stride=1):
+    """3x3 deform convolution with padding"""
+    return DeformConv2dPack(in_planes, out_planes, kernel_size=3, stride=stride, 
+                     padding=1, bias=False)
+
 
 class BasicBlock(nn.Module):
+    """
+    类似与官方resnet中的Bottleneck,
+    """
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, drop_rate=0.0, drop_block=False, block_size=1):
@@ -64,6 +74,55 @@ class BasicBlock(nn.Module):
 
         return out
 
+class DeformBasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, drop_rate=0.0, drop_block=False, block_size=1):
+        super(DeformBasicBlock, self).__init__()
+        self.conv1 = deform_conv3x3(inplanes, planes)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.relu = nn.LeakyReLU(0.1)
+        self.conv2 = deform_conv3x3(planes, planes)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.conv3 = deform_conv3x3(planes, planes)
+        self.bn3 = nn.BatchNorm2d(planes)
+        self.maxpool = nn.MaxPool2d(stride)
+        self.downsample = downsample
+        self.stride = stride
+        self.drop_rate = drop_rate
+        self.num_batches_tracked = 0
+        self.drop_block = drop_block
+        self.block_size = block_size
+
+    def forward(self, x):
+        self.num_batches_tracked += 1
+
+        residual = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+        out += residual 
+        out = self.relu(out)
+        out = self.maxpool(out)
+
+        if self.drop_rate > 0:
+            out = F.dropout(out, p=self.drop_rate,
+                            training=self.training, inplace=True)
+
+        return out
+
+
 
 class ResNet(nn.Module):
 
@@ -73,6 +132,11 @@ class ResNet(nn.Module):
 
         self.layer1 = self._make_layer(
             block, 64, stride=2, drop_rate=drop_rate)
+
+        if args.use_deformconv:
+            # 除layer1外,layer2,3,4均使用DeformBasicBlock
+            block = DeformBasicBlock
+
         self.layer2 = self._make_layer(
             block, 160, stride=2, drop_rate=drop_rate)
         self.layer3 = self._make_layer(block, 320, stride=2, drop_rate=drop_rate, drop_block=True,
@@ -151,7 +215,8 @@ class ResNet(nn.Module):
 
 
 if __name__ == '__main__':
-    args = None
+    args = {}
+    args.use_deformconv = True
     v = ResNet(args)
     input = torch.FloatTensor(5, 3, 80, 80)
     out = v(input)

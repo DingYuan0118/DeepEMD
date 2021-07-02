@@ -78,6 +78,10 @@ parser.add_argument('--SA_res', action="store_true", help="使用残差连接")
 parser.add_argument('--no_mlp', action="store_true", help="去除mlp层")
 parser.add_argument('--pos_embed', action="store_true", help="加入相对位置编码(relative position embedding)")
 
+# ================================== 可变形卷积相关参数 ===================================================
+parser.add_argument("--use_deformconv", action='store_true', help="在resnet12基础上使用可变形卷积")
+
+
 
 args = parser.parse_args()
 parse_tune_pretrain(args)
